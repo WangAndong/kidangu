@@ -1,0 +1,33 @@
+<?xml version="1.0" ?>
+
+<project name="april" default="build" basedir=".">
+
+  <!-- Build everything -->
+  <target name="build" depends="build-java"/>
+
+  <!-- Clean everything -->
+  <target name="clean" depends="clean-java"/>
+
+  <target name="build-java">
+    <javac
+       srcdir="src"
+       includes="**/*.java"
+       debug="on"
+       optimize="off"
+       destdir="build"
+       compiler="extJavac"
+       deprecation="yes"
+       source="1.5"
+       target="1.5"
+       >
+    </javac>
+  </target>
+
+  <target name="clean-java" >
+    <delete>
+      <fileset dir="build" includes="**/*.class"/>
+      <fileset dir="." includes="**/*~" defaultexcludes="no"/>
+    </delete>
+  </target>
+
+</project>
