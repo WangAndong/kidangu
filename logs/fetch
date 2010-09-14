@@ -1,0 +1,1 @@
+rsync -avz april@umbrella.eecs.umich.edu://home/april/Projects/franco/logs .
