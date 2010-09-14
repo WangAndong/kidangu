@@ -1,6 +1,6 @@
 <?xml version="1.0" ?>
 
-<project name="april" default="build" basedir=".">
+<project name="franco" default="build" basedir=".">
 
   <!-- Build everything -->
   <target name="build" depends="build-java"/>
