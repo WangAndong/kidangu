@@ -1,9 +1,27 @@
 package franco.model;
 
-class Model
+import java.util.*;
+
+import franco.opts.*;
+
+public class Model
 {
-    public static void main(String args[])
+    final PointCloud pointCloud;
+    ArrayList<ModelUpdateListener> listeners = new ArrayList<ModelUpdateListener>();
+
+
+    public Model()
     {
-        System.out.println("This is the model");
+        this.pointCloud = new PointCloud(ProgramOptions.getConfig(), this);
+    }
+
+    public void addListener(ModelUpdateListener l)
+    {
+        listeners.add(l);
+    }
+
+    public PointCloud getPointCloud()
+    {
+        return pointCloud;
     }
 }
