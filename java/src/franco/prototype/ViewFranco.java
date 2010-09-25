@@ -47,11 +47,6 @@ public class ViewFranco implements ViewObject, LCMSubscriber
     Statistics statistics;
 
     final static ColorMapper colorMap = ColorMapper.makeJetWhite(-3, 7);
-    // new ColorMapper(new int[] { 0x333333, 0x666666, 0x999999, 0x99aacc }, -2, 5);
-    // ColorMapper.makeGray(-3, 5);
-    // final static ColorMapper colorMap2 = new ColorMapper(new int[] { 0x888888, 0x000088, 0x006060, 0x008800,
-    // 0x606000,
-    // 0x880000, 0x888800 }, 0, 2);
 
     final static boolean MAKE_MOVIE = false;
 
@@ -515,26 +510,6 @@ public class ViewFranco implements ViewObject, LCMSubscriber
         this.statistics = new Statistics(spos, squat, imgRepositoryPath);
 
         this.viewer.getVisCanvas().setBackground(new Color(0, 16, 16));
-//        this.viewer.getF.addWindowListener(new WindowOpenCloseListener());
-//        this.viewer.vc.getViewManager().lookAt(new double[] { -101.3, -1.55, 16.92 },
-//                new double[] { -49.68, -2.39, -3.59 }, new double[] { 0.37, -0.006, 0.93 });
-
-//        this.viewer.vc.defaultEventHandler.setBookmark(KeyEvent.VK_F1, new VisCanvasDefaultEventHandler.Bookmark(
-//                new double[] { -14.937483769424203, -1.1780828459301385, 46.650738020973336 }, new double[] {
-//                -14.937483769424203, -1.1780828459301385, 0.0 }, new double[] { 0.0, 1.0, 0.0 }, new double[] {
-//                0.0, 0.0, 1.0 }, 0, 1, 0));
-//
-//        this.viewer.vc.defaultEventHandler.setBookmark(KeyEvent.VK_F2, new VisCanvasDefaultEventHandler.Bookmark(
-//                new double[] { -39.850548709281796, -28.58548156977015, 29.963946285105006 }, new double[] {
-//                -16.46000084866529, -1.5422651984685327, 0.0 }, new double[] { 0.4201829772869153,
-//                0.4857987614036993, 0.7664501477701829 }, new double[] { 0.0, 0.0, 1.0 }, 0, 1, 1));
-//
-//        this.viewer.vc.defaultEventHandler.setBookmark(KeyEvent.VK_F3, new VisCanvasDefaultEventHandler.Bookmark(
-//                new double[] { -26.962608099066998, 15.981307937186843, 12.5217672839375 }, new double[] {
-//                -16.558382587693302, -0.9359956686003216, -0.8439524209561958 }, new double[] {
-//                0.29248272378378765, -0.47557783443737106, 0.8296261686325216 },
-//                new double[] { 0.0, 0.0, 1.0 }, 0, 1, 1));
-
         this.viewer.getVisCanvas().addEventHandler(new MyVisCanvasEventHandler());
 
         try {
@@ -643,24 +618,6 @@ public class ViewFranco implements ViewObject, LCMSubscriber
                     state.renderedObjectCollection.add(new VisBox(state.simulatedMotionOffset, statistics.getStartY(i),
                             stat[1] - 0.25, State.BIN_WIDTH, statistics.getEndY(i) - statistics.getStartY(i), 0.25,
                             colorMap.mapColor(stat[1])));
-                    /*
-                     * state.renderedObjectCollection.add(new VisBox(state.simulatedMotionOffset + 0.25, 50 + statistics
-                     * .getStartY(i), 0, State.BIN_WIDTH, statistics.getEndY(i) - statistics.getStartY(i), prevStat[1],
-                     * colorMap.mapColor(prevStat[1])));
-                     */
-
-                    // Highlight road edges
-                    // final double delta = 0.2;
-                    // final double sqrt2 = Math.sqrt(2);
-                    // boolean isEdge = Math.abs(data.get(i)[1] - previousData.get(i)[1]) >= delta;
-                    // if (i > 0) {
-                    // isEdge |= Math.abs(data.get(i)[1] - previousData.get(i - 1)[1]) >= delta * sqrt2;
-                    // isEdge |= Math.abs(data.get(i)[1] - data.get(i - 1)[1]) >= delta;
-                    // }
-                    // if (i < data.size() - 1) {
-                    // isEdge |= Math.abs(data.get(i)[1] - previousData.get(i + 1)[1]) >= delta * sqrt2;
-                    // isEdge |= Math.abs(data.get(i)[1] - data.get(i + 1)[1]) >= delta;
-                    // }
 
                     double edgeHeight = 0;
                     if (i < data.size() - 1) {
@@ -671,68 +628,8 @@ public class ViewFranco implements ViewObject, LCMSubscriber
 
                     // final Color nonRoadColor = new Color(128, 0, 0);
                     if (edgeHeight < 0.4) {
-                        // state.renderedObjectCollection.add(new VisBox(state.simulatedMotionOffset - 0.075, statistics
-                        // .getStartY(i), 0, 0.15, 0.15, stat[1] + edgeHeight, nonRoadColor));
                         state.boundaryPoints.add(new double[] { state.simulatedMotionOffset, statistics.getStartY(i) });
                     }
-                }
-
-                //
-                // find a least squares fit to the points with the point of intersection as origin. The best least
-                // squares fit over time is chosen based on the balance on the least squares fit. The balance is defined
-                // as the difference between the number of points on either side of the line.
-                //
-                if (state.atIntersection) {
-                    // double sum_xy = 0;
-                    // double sum_xx = 0;
-                    // double[] intersectionPoint = state.intersectionPoints.get(state.intersectionPoints.size() / 2);
-                    //
-                    // state.intersectionLineObjectCollection.clear();
-                    // final Color highlight = new Color(255, 255, 0);
-                    // for (int j = 0; j < state.boundaryPoints.size(); ++j) {
-                    // final double x = state.boundaryPoints.get(j)[0] - intersectionPoint[0];
-                    // final double y = state.boundaryPoints.get(j)[1] - intersectionPoint[1];
-                    //
-                    // // state.intersectionLineObjectCollection.add(new VisBox(state.boundaryPoints.get(j)[0] - 0.075,
-                    // // state.boundaryPoints.get(j)[1], 0, 0.15, 0.15, 1, highlight));
-                    //
-                    // sum_xx += x * x;
-                    // sum_xy += x * y;
-                    // }
-                    //
-                    // final double slope = sum_xx / sum_xy; // Slope of the perpendicular to the least squares fit
-                    // final double segmentLength = 10;
-                    // final double[] segmentStart = new double[] { intersectionPoint[0] - segmentLength,
-                    // intersectionPoint[1] - (slope * -segmentLength) };
-                    // final double[] segmentEnd = new double[] { intersectionPoint[0] + segmentLength,
-                    // intersectionPoint[1] - (slope * segmentLength) };
-                    //
-                    // // final Color intersectionEstimateColor = new Color(128, 160, 160);
-                    // // state.intersectionLineObjectCollection.add(new VisLineSegment(segmentStart[0],
-                    // segmentStart[1],
-                    // // PEG_HEIGHT - 0.25, segmentEnd[0], segmentEnd[1], PEG_HEIGHT - 0.25,
-                    // // intersectionEstimateColor, 2));
-                    //
-                    // // Calculate the balance of the resulting fit
-                    // int balance = 0;
-                    // for (int j = 0; j < state.boundaryPoints.size(); ++j) {
-                    // final double x = state.boundaryPoints.get(j)[0];
-                    // final double y = state.boundaryPoints.get(j)[1];
-                    //
-                    // balance += geometricCounterClockWise(segmentStart, segmentEnd, new double[] { x, y });
-                    // }
-                    // System.out.println(balance);
-                    //
-                    // if (Math.abs(balance) <= state.bestKnownBalance) {
-                    // state.bestKnownBalance = Math.abs(balance);
-                    // state.bestSegmentStart = segmentStart;
-                    // state.bestSegmentEnd = segmentEnd;
-                    // state.bestSlope = slope;
-                    // }
-                    //
-                    // // state.intersectionLineObjectCollection.add(new VisLineSegment(state.bestSegmentStart[0],
-                    // // state.bestSegmentStart[1], PEG_HEIGHT * 3, state.bestSegmentEnd[0],
-                    // // state.bestSegmentEnd[1], PEG_HEIGHT * 3, intersectionColor, 4));
                 }
 
                 // If we are at/reached a crossing ...
