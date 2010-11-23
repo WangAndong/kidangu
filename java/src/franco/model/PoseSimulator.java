@@ -24,7 +24,7 @@ public class PoseSimulator implements LCMSubscriber
             pose_t pose = new pose_t();
             pose.utime = velodyne.utime;
             pose.orientation = new double[] {1, 0, 0, 0};
-            pose.pos = new double[] {-0.25*i, 0, 0};
+            pose.pos = new double[] {-0.25*i++, 0, 0};
 
             LCM.getSingleton().publish("POSE", pose);
 
