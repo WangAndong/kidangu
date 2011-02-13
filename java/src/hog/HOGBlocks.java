@@ -1,8 +1,12 @@
 package hog;
 
 import java.awt.image.*;
+import java.io.*;
+
+import javax.imageio.*;
 
 import april.image.*;
+import april.util.*;
 
 public class HOGBlocks
 {
@@ -51,12 +55,41 @@ public class HOGBlocks
         return new Descriptor(v, blockWidth, blockHeight);
     }
 
-    public static void main(String args[])
+    public static void main(String args[]) throws IOException
     {
-        int i = 0;
+        BufferedImage im = ImageIO.read(new File("/home/rpradeep/Desktop/hog.png"));
+        HOGBlocks hogBlocks = new HOGBlocks(im);
 
-        for (int w : new int[] {})
+        Tic tic = new Tic();
+        for (int w=12; w<64; w+=4) {
+            int step = 0;
 
-        System.out.println(i);
+            if (w >= 48)
+                step = 8;
+            else if (w >= 32)
+                step = 6;
+            else
+                step = 4;
+
+            /* 1:1 blocks */
+            int h = w;
+            for (int y=0; y+h<128; y+=step)
+                for (int x=0; x+w<64; x+=step)
+                    hogBlocks.getDescriptor(x, y, w, h);
+
+            /* 1:2 blocks */
+            h = 2*w;
+            for (int y=0; y+h<128; y+=step)
+                for (int x=0; x+w<64; x+=step)
+                    hogBlocks.getDescriptor(x, y, w, h);;
+
+            /* 2:1 blocks */
+            h = w/2;
+            for (int y=0; y+h<128; y+=step)
+                for (int x=0; x+w<64; x+=step)
+                    hogBlocks.getDescriptor(x, y, w, h);;
+        }
+
+        System.out.println(tic.toc() + "s");
     }
 }

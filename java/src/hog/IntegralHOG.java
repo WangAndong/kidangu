@@ -39,7 +39,7 @@ public class IntegralHOG
             float[] xy = new float[] {xgim.d[i], ygim.d[i]};
 
             float theta = (float) Math.abs(MathUtil.atan2(xy[0], xy[1]));
-            int idx = (int) (CBINS*theta / Math.PI);
+            int idx = (int) ((CBINS-1)*theta / Math.PI);
 
             bin[idx][i] = LinAlg.magnitude(xy);
         }
