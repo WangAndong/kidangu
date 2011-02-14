@@ -1,10 +1,13 @@
 package hog;
 
+import hog.ped.*;
+
 import java.awt.image.*;
 import java.io.*;
 import java.util.*;
 
 import javax.imageio.*;
+
 
 import april.image.*;
 import april.jmat.*;
@@ -21,7 +24,7 @@ public class HOGBlocks
         final int width;
         final int height;
 
-        DescriptorInfo(int x, int y, int width, int height)
+        public DescriptorInfo(int x, int y, int width, int height)
         {
             this.x = x;
             this.y = y;

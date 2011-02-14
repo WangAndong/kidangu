@@ -1,4 +1,6 @@
-package hog;
+package hog.ped;
+
+import hog.*;
 
 import java.awt.*;
 import java.awt.image.*;
