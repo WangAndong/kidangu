@@ -2,27 +2,31 @@ package hog;
 
 import java.awt.image.*;
 import java.io.*;
+import java.util.*;
 
 import javax.imageio.*;
 
 import april.image.*;
+import april.jmat.*;
 import april.util.*;
 
 public class HOGBlocks
 {
     final IntegralHOG ihog;
 
-    public static class Descriptor
+    public static class DescriptorInfo
     {
-        final float[] v;
-        final int blockWidth;
-        final int blockHeight;
+        final int x;
+        final int y;
+        final int width;
+        final int height;
 
-        Descriptor(float[] v, int blockWidth, int blockHeight)
+        DescriptorInfo(int x, int y, int width, int height)
         {
-            this.v = v;
-            this.blockWidth = blockWidth;
-            this.blockHeight = blockHeight;
+            this.x = x;
+            this.y = y;
+            this.width = width;
+            this.height = height;
         }
     }
 
@@ -32,8 +36,16 @@ public class HOGBlocks
         ihog = new IntegralHOG(new FloatImage(im.getWidth(), im.getHeight(), pixels));
     }
 
-    public Descriptor getDescriptor(int x, int y, int blockWidth, int blockHeight)
+    public float[] getDescriptor(DescriptorInfo d)
     {
+        return getDescriptor(d.x, d.y, d.width, d.height);
+    }
+
+    public float[] getDescriptor(int x, int y, int blockWidth, int blockHeight)
+    {
+        assert blockWidth%2 == 0;
+        assert blockHeight%2 == 0;
+
         int bw2 = blockWidth / 2;
         int bh2 = blockHeight / 2;
 
@@ -52,7 +64,20 @@ public class HOGBlocks
             v[3*N+i] = hog4[i];
         }
 
-        return new Descriptor(v, blockWidth, blockHeight);
+        float norm = ihog.norm(x, y, x+blockWidth-1, blockHeight-1);
+        return LinAlg.scale(v, 1.0/norm);
+    }
+
+    public static ArrayList<float[]> getDescriptors(BufferedImage im, ArrayList<DescriptorInfo> dinfo)
+    {
+        HOGBlocks hogBlocks = new HOGBlocks(im);
+        ArrayList<float[]> descs = new ArrayList<float[]>();
+
+
+        for (DescriptorInfo ifo : dinfo)
+            descs.add(hogBlocks.getDescriptor(ifo));
+
+        return descs;
     }
 
     public static void main(String args[]) throws IOException
@@ -60,36 +85,10 @@ public class HOGBlocks
         BufferedImage im = ImageIO.read(new File("/home/rpradeep/Desktop/hog.png"));
         HOGBlocks hogBlocks = new HOGBlocks(im);
 
-        Tic tic = new Tic();
-        for (int w=12; w<64; w+=4) {
-            int step = 0;
-
-            if (w >= 48)
-                step = 8;
-            else if (w >= 32)
-                step = 6;
-            else
-                step = 4;
-
-            /* 1:1 blocks */
-            int h = w;
-            for (int y=0; y+h<128; y+=step)
-                for (int x=0; x+w<64; x+=step)
-                    hogBlocks.getDescriptor(x, y, w, h);
-
-            /* 1:2 blocks */
-            h = 2*w;
-            for (int y=0; y+h<128; y+=step)
-                for (int x=0; x+w<64; x+=step)
-                    hogBlocks.getDescriptor(x, y, w, h);;
-
-            /* 2:1 blocks */
-            h = w/2;
-            for (int y=0; y+h<128; y+=step)
-                for (int x=0; x+w<64; x+=step)
-                    hogBlocks.getDescriptor(x, y, w, h);;
+        while (true) {
+            Tic tic = new Tic();
+            hogBlocks.getDescriptors(im, PedestrianDetector.descriptorInfo);
+            System.out.printf("time=%.3fs\n", tic.toc());
         }
-
-        System.out.println(tic.toc() + "s");
     }
 }

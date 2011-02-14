@@ -15,7 +15,8 @@ public class IntegralHOG
     final FloatImage ygim;
 
     static final int CBINS = 9;
-    final IntegralImageF iim[] = new IntegralImageF[CBINS];
+    final IntegralImageF iimBins[] = new IntegralImageF[CBINS];
+    final IntegralImageF iimNorm;
 
     public IntegralHOG(FloatImage fim)
     {
@@ -31,8 +32,13 @@ public class IntegralHOG
         xgim = sim.filterHorizontalCentered(k);
         ygim = sim.filterVerticalCentered(k);
 
-        /* 9 images. One for each orientation bin */
+        /* 9 images. One for each orientation bin. The magnitude of the
+         * gradient is first calculated and stored in mag. The angle of
+         * the gradient is quantized to find the orientation bin and the
+         * magnitude is stored in that bin. The magnitude is also stored
+         * separately to answer queries for region norms */
         float bin[][] = new float[CBINS][fim.d.length];
+        float mag[] = new float[fim.d.length];
 
         /* Store magnitude information in orientation bins */
         for (int i=0; i<fim.d.length; ++i) {
@@ -41,23 +47,33 @@ public class IntegralHOG
             float theta = (float) Math.abs(MathUtil.atan2(xy[0], xy[1]));
             int idx = (int) ((CBINS-1)*theta / Math.PI);
 
-            bin[idx][i] = LinAlg.magnitude(xy);
+            mag[i] = LinAlg.magnitude(xy);
+            bin[idx][i] = mag[i];
         }
 
         /* Create integral images for each bin */
         for(int i=0; i<CBINS; ++i)
-            iim[i] = new IntegralImageF(fim.width, fim.height, bin[i]);
+            iimBins[i] = new IntegralImageF(fim.width, fim.height, bin[i]);
+
+        /* Magnitude integral image */
+        iimNorm = new IntegralImageF(fim.width, fim.height, mag);
     }
 
-    /** Sum of pixel values from x0,y0 (inclusive) to x1,y1 (inclusive) */
+    /** HOG from x0,y0 (inclusive) to x1,y1 (inclusive) */
     float[] hog(int x0, int x1, int y0, int y1)
     {
         float[] h = new float[CBINS];
 
         /* Assemble the histogram from the integral image for each bin*/
         for (int i=0; i<9; ++i)
-            h[i] = (float) iim[i].sum(x0, y0, x1, y1);
+            h[i] = (float) iimBins[i].sum(x0, y0, x1, y1);
 
         return h;
+    }
+
+    /** HOG from x0,y0 (inclusive) to x1,y1 (inclusive) */
+    float norm(int x0, int x1, int y0, int y1)
+    {
+        return iimNorm.sum(x0, y0, x1, y1);
     }
 }
