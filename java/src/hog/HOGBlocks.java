@@ -1,17 +1,11 @@
 package hog;
 
-import hog.ped.*;
-
 import java.awt.image.*;
-import java.io.*;
 import java.util.*;
-
-import javax.imageio.*;
-
 
 import april.image.*;
 import april.jmat.*;
-import april.util.*;
+
 
 public class HOGBlocks
 {
@@ -81,17 +75,5 @@ public class HOGBlocks
             descs.add(hogBlocks.getDescriptor(ifo));
 
         return descs;
-    }
-
-    public static void main(String args[]) throws IOException
-    {
-        BufferedImage im = ImageIO.read(new File("/home/rpradeep/Desktop/hog.png"));
-        HOGBlocks hogBlocks = new HOGBlocks(im);
-
-        while (true) {
-            Tic tic = new Tic();
-            hogBlocks.getDescriptors(im, PedestrianDetector.descriptorInfo);
-            System.out.printf("time=%.3fs\n", tic.toc());
-        }
     }
 }

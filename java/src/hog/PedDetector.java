@@ -1,15 +1,16 @@
-package hog.ped;
+package hog;
 
 
-import hog.*;
 import hog.HOGBlocks.*;
 
 import java.util.*;
 
-public class PedestrianDetector
+
+public class PedDetector
 {
-    /** What block do we compute descriptors from */
-    public static final ArrayList<HOGBlocks.DescriptorInfo> descriptorInfo = new ArrayList<HOGBlocks.DescriptorInfo>();
+    /** Information about location and size of descriptors in a window. Each descriptor
+     * describes the feature in PedDataSet at the coressponding feature index */
+    public static final ArrayList<HOGBlocks.DescriptorInfo> descriptorInfo = new ArrayList();
 
     static {
         /* Initialize descriptor information */
