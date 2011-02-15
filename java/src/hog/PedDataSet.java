@@ -13,27 +13,27 @@ public class PedDataSet implements DataSet
     ArrayList<ArrayList<float[]>> data = new ArrayList<ArrayList<float[]>>();
     ArrayList<Integer> labels = new ArrayList<Integer>();
 
-    public PedDataSet(File dirPositive, File dirNegative, FilenameFilter filter) throws IOException
+    public PedDataSet(File pos, File neg, FilenameFilter filt) throws IOException
     {
-        this(dirPositive, dirNegative, false, filter);
+        this(pos, neg, false, filt);
     }
 
-    public PedDataSet(File dirPositive, File dirNegative, boolean fProgress, FilenameFilter filter) throws IOException
+    public PedDataSet(File pos, File neg, boolean fVerbose, FilenameFilter filt) throws IOException
     {
-        if (fProgress) {
+        if (fVerbose) {
             System.out.println("DataSet: Loading positive examples");
         }
-        processFolder(dirPositive, fProgress, filter, 1);
+        processFolder(pos, fVerbose, filt, 1);
 
-        if (fProgress) {
+        if (fVerbose) {
             System.out.println("DataSet: Loading negative examples");
         }
-        processFolder(dirNegative, fProgress, filter, -1);
+        processFolder(neg, fVerbose, filt, -1);
     }
 
-    private void processFolder(File dir, boolean fProgress, FilenameFilter filter, int label) throws IOException
+    private void processFolder(File dir, boolean fVerbose, FilenameFilter filt, int lbl) throws IOException
     {
-        File[] files = dir.listFiles(filter);
+        File[] files = dir.listFiles(filt);
 
         for (int i=0; i<files.length; ++i) {
             BufferedImage im = ImageIO.read(files[i]);
@@ -44,9 +44,9 @@ public class PedDataSet implements DataSet
             im = copySubImage(im, W/2-32, H/2-64, 64, 128);
 
             data.add(HOGBlocks.getDescriptors(im, PedDetector.descriptorInfo));
-            labels.add(label);
+            labels.add(lbl);
 
-            if (fProgress) {
+            if (fVerbose) {
                 printProgress(i, files.length);
                 System.out.print('\r');
             }
@@ -65,6 +65,11 @@ public class PedDataSet implements DataSet
         return 1;
     }
 
+    @Override
+    public ArrayList<float[]> getInstance(int idx)
+    {
+        return data.get(idx);
+    }
 
     @Override
     public ArrayList<float[]> getFeatureOfInstances(int idx)

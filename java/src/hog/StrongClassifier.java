@@ -1,10 +1,16 @@
 package hog;
 
+import java.io.*;
 import java.util.*;
 
 import april.jmat.*;
 
 
+/**
+ * Constructs a StrongClassifier by using the weighted vote of a set of linear
+ * SVMs (weak classifier). The StrongClassifier is trained using AdaBoost
+ * (as described in Pattern Recognition and Machine Learning, C. M. Bishop)
+ */
 public class StrongClassifier
 {
     ArrayList<LinearSVM> classifiers = new ArrayList<LinearSVM>();
@@ -26,6 +32,7 @@ public class StrongClassifier
         //
         // Add weak classifiers
         //
+        double fpRate = 1.0;
         while (nClassifiers-- > 0) {
             wt = LinAlg.normalizeL1(wt);
 
@@ -36,7 +43,7 @@ public class StrongClassifier
             LinearSVM best = LinearSVM.train(ds, wt, rand.nextInt(ds.numFeatures()));
             for (int i=0; i<250; ++i) {
                 LinearSVM c = LinearSVM.train(ds, wt, rand.nextInt(ds.numFeatures()));
-                best = (c.getError() < best.getError()) ? c : best;
+                best = (c.getTrainError() < best.getTrainError()) ? c : best;
             }
 
             classifiers.add(best);
@@ -44,23 +51,26 @@ public class StrongClassifier
             //
             //  Update weights based on mis-classification
             //
-            final double eps = best.getError();
+            final double eps = best.getTrainError();
             final double rho =(1-eps)/eps;
             alpha.add(Math.log(rho));
 
             for (int i=0; i<wt.length; ++i) {
                 wt[i] *= best.wasMisClassified(i) ? rho : 1;
             }
+
+            //
+            //  Analyze performance
+            //
         }
     }
 
-    public int predict(float[] x)
+    /** returns {-1, 1} */
+    public int predict(ArrayList<float[]> instance)
     {
         double sumAlphaH = 0;
-
-        for (int i=0; i<alpha.size(); ++i) {
-            sumAlphaH += alpha.get(i) * classifiers.get(i).predict(x);
-        }
+        for (int i=0; i<alpha.size(); ++i)
+            sumAlphaH += alpha.get(i) * classifiers.get(i).predict(instance);
 
         return sumAlphaH >= 0 ? 1 : -1;
     }

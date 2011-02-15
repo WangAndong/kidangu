@@ -6,7 +6,12 @@ import java.util.*;
 import april.image.*;
 import april.jmat.*;
 
-
+/**
+ * Compute HOG features inside a set of regions inside a given image.
+ * Uses IntegralHOG to make this efficient. This class helps extract
+ * HOGs from the underlying IntegralHOG in a format suitable for a
+ * {@link DataSet}.
+ */
 public class HOGBlocks
 {
     final IntegralHOG ihog;

@@ -9,7 +9,7 @@ import java.util.*;
 public class PedDetector
 {
     /** Information about location and size of descriptors in a window. Each descriptor
-     * describes the feature in PedDataSet at the coressponding feature index */
+     * describes the feature in PedDataSet at the corresponding feature index */
     public static final ArrayList<HOGBlocks.DescriptorInfo> descriptorInfo = new ArrayList();
 
     static {

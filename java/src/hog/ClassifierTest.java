@@ -40,15 +40,15 @@ public class ClassifierTest
                 double[] Wts = LinAlg.normalizeL1(new double[] {1, 1, 1, pg.gd("w")});
 
                 LinearSVM svm = LinearSVM.train(ds, Wts, 0);
-                jf.setTitle("Error: " + svm.err);
+                jf.setTitle("Error: " + svm.getTrainError());
 
                 VisWorld.Buffer vb = vc.getWorld().getBuffer("classifier");
 
                 // Show points with original labels
                 VisData vd1 = new VisData(new VisDataPointStyle(new ClassColorizer(), 20));
 
-                for (int i=0; i<ds.data.size(); ++i) {
-                    float[] d = ds.data.get(i);
+                for (int i=0; i<ds.numInstances(); ++i) {
+                    float[] d = ds.getInstance(i).get(0);
                     vd1.add(new double[] {d[0], d[1], 0, ds.getLabel(i)});
 
                     vb.addBuffered(new VisText(
@@ -62,9 +62,9 @@ public class ClassifierTest
                 // Show points with classification labels
                 VisData vd2 = new VisData(new VisDataPointStyle(new ClassColorizer2(), 14));
 
-                for (int i=0; i<ds.data.size(); ++i) {
-                    float[] d = ds.data.get(i);
-                    int l = svm.predict(d);
+                for (int i=0; i<ds.numInstances(); ++i) {
+                    float[] d = ds.getInstance(i).get(0);
+                    int l = svm.predict(ds.getInstance(i));
                     System.out.println(l);
                     vd2.add(new double[] {d[0], d[1], 0.1, l});
                 }
@@ -104,8 +104,8 @@ public class ClassifierTest
                 // Show points with original labels
                 VisData vd1 = new VisData(new VisDataPointStyle(new ClassColorizer(), 20));
 
-                for (int i=0; i<ds.data.size(); ++i) {
-                    float[] d = ds.data.get(i);
+                for (int i=0; i<ds.numInstances(); ++i) {
+                    float[] d = ds.getInstance(i).get(0);
                     vd1.add(new double[] {d[0], d[1], 0, ds.getLabel(i)});
                 }
                 vb.addBuffered(vd1);
@@ -113,9 +113,9 @@ public class ClassifierTest
                 // Show points with classification labels
                 VisData vd2 = new VisData(new VisDataPointStyle(new ClassColorizer(), 12));
 
-                for (int i=0; i<ds.data.size(); ++i) {
-                    float[] d = ds.data.get(i);
-                    int l = sc.predict(d);
+                for (int i=0; i<ds.numInstances(); ++i) {
+                    float[] d = ds.getInstance(i).get(0);
+                    int l = sc.predict(ds.getInstance(i));
                     vd2.add(new double[] {d[0], d[1], 0.1, l});
                 }
                 vb.addBuffered(vd2);
@@ -135,7 +135,6 @@ public class ClassifierTest
 
     private static VisData getSeparatingLine(LinearSVM svm)
     {
-        // Show the separating line
         double[] w = svm.svm.getFeatureWeights();
         GLine2D line = new GLine2D(-w[0]/w[1], -w[2]/w[1]);
         VisData vdLine = new VisData(new VisDataLineStyle(Color.gray, 2));
@@ -167,8 +166,8 @@ class ClassColorizer2 implements Colorizer
 
 class XORDataSet implements DataSet
 {
-    ArrayList<float[]> data = new ArrayList<float[]>();
-    ArrayList<Integer> labels = new ArrayList<Integer>();
+    private ArrayList<float[]> data = new ArrayList<float[]>();
+    private ArrayList<Integer> labels = new ArrayList<Integer>();
 
     public XORDataSet()
     {
@@ -181,6 +180,12 @@ class XORDataSet implements DataSet
         labels.add(1);
         labels.add(-1);
         labels.add(-1);
+    }
+
+    @Override
+    public ArrayList<float[]> getInstance(int idx)
+    {
+        return new ArrayList<float[]>(Arrays.asList(data.get(idx)));
     }
 
     @Override
@@ -216,8 +221,8 @@ class XORDataSet implements DataSet
 
 class GaussianMixtureDataSet implements DataSet
 {
-    ArrayList<float[]> data = new ArrayList<float[]>();
-    ArrayList<Integer> labels = new ArrayList<Integer>();
+    private ArrayList<float[]> data = new ArrayList<float[]>();
+    private ArrayList<Integer> labels = new ArrayList<Integer>();
 
     public GaussianMixtureDataSet()
     {
@@ -236,6 +241,12 @@ class GaussianMixtureDataSet implements DataSet
                 labels.add(-1);
             }
         }
+    }
+
+    @Override
+    public ArrayList<float[]> getInstance(int idx)
+    {
+        return new ArrayList<float[]>(Arrays.asList(data.get(idx)));
     }
 
     @Override

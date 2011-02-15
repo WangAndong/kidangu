@@ -7,20 +7,23 @@ import liblinear.*;
 import april.jmat.*;
 
 
+/**
+ *  Wrapper for LibLinear.Model
+ */
 class LinearSVM
 {
     static final double eps = 1e-10;
 
     final int featureIdx;
     final Model svm;
-    final double err;
+    final double trainingErr;
     ArrayList<Boolean> misClassified;
 
-    private LinearSVM(int featureIdx, Model svm, ArrayList<Boolean> misClassified, double err)
+    private LinearSVM(int fIdx, Model svm, ArrayList<Boolean> misClassified, double err)
     {
-        this.featureIdx = featureIdx;
+        this.featureIdx = fIdx;
         this.svm = svm;
-        this.err = err;
+        this.trainingErr = err;
         this.misClassified = misClassified;
     }
 
@@ -46,13 +49,15 @@ class LinearSVM
         return new LinearSVM(featureIdx, svm, misClassified, err);
     }
 
-    public double getError()
+    public double getTrainError()
     {
-        return err;
+        return trainingErr;
     }
 
-    public int predict(float[] x)
+    /** returns {-1, 1} */
+    public int predict(ArrayList<float[]> instance)
     {
+        float[] x = instance.get(featureIdx);
         return Linear.predict(svm, convertToFeatureNode(x, svm.getBias()));
     }
 
