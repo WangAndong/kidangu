@@ -89,7 +89,8 @@ public class ClassifierTest
         jf.add(vc, BorderLayout.CENTER);
 
         ParameterGUI pg = new ParameterGUI();
-        pg.addIntSlider("n", "Classifiers", 0, 250, 2);
+        pg.addDoubleSlider("tpr", "True Positive Rate", 0, 1, 0.9975);
+        pg.addDoubleSlider("fpr", "False Positive Rate", 0, 1, 0.7);
         jf.add(pg, BorderLayout.SOUTH);
 
         final GaussianMixtureDataSet ds = new GaussianMixtureDataSet();
@@ -97,7 +98,14 @@ public class ClassifierTest
         pg.addListener(new ParameterListener() {
             public void parameterChanged(ParameterGUI pg, String name)
             {
-                StrongClassifier sc = new StrongClassifier(ds, pg.gi("n"));
+                StrongClassifier sc;
+                try {
+                    sc = new StrongClassifier(ds, pg.gd("tpr"), pg.gd("fpr"));
+                }
+                catch (ConvergenceFailure e) {
+                    e.printStackTrace();
+                    return;
+                }
 
                 VisWorld.Buffer vb = vc.getWorld().getBuffer("classifier");
 
@@ -230,13 +238,13 @@ class GaussianMixtureDataSet implements DataSet
         Random g2 = new Random();
         Random b = new Random();
 
-        for (int i=0 ;i<15; ++i) {
+        for (int i=0 ;i<150; ++i) {
             if (b.nextBoolean()) {
                 double[] p = new double[] {g1.nextGaussian(), g1.nextGaussian()};
                 data.add(LinAlg.copyFloats(p));
                 labels.add(1);
             } else {
-                double[] p = new double[] {.5+g2.nextGaussian(), .5+g2.nextGaussian()};
+                double[] p = new double[] {2.8+g2.nextGaussian(), g2.nextGaussian()};
                 data.add(LinAlg.copyFloats(p));
                 labels.add(-1);
             }

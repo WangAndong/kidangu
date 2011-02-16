@@ -66,6 +66,7 @@ public class HOGBlocks
             v[3*N+i] = hog4[i];
         }
 
+        // TODO: Does L2 norm perform better
         float norm = ihog.norm(x, y, x+blockWidth-1, blockHeight-1);
         return LinAlg.scale(v, 1.0/norm);
     }
