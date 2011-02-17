@@ -1,6 +1,5 @@
 package hog;
 
-import java.awt.*;
 import java.awt.image.*;
 import java.io.*;
 import java.util.*;
@@ -31,6 +30,12 @@ public class PedDataSet implements DataSet
         processFolder(neg, fVerbose, filt, -1);
     }
 
+    private PedDataSet(ArrayList<ArrayList<float[]>> data, ArrayList<Integer> labels)
+    {
+        this.data = data;
+        this.labels = labels;
+    }
+
     private void processFolder(File dir, boolean fVerbose, FilenameFilter filt, int lbl) throws IOException
     {
         File[] files = dir.listFiles(filt);
@@ -41,16 +46,17 @@ public class PedDataSet implements DataSet
             /* Get the centered 64x128 pixels */
             int W = im.getWidth();
             int H = im.getHeight();
-            im = copySubImage(im, W/2-32, H/2-64, 64, 128);
+            im = Util.copySubImage(im, W/2-32, H/2-64, 64, 128);
 
             data.add(HOGBlocks.getDescriptors(im, PedDetector.descriptorInfo));
             labels.add(lbl);
 
             if (fVerbose) {
-                printProgress(i, files.length);
-                System.out.print('\r');
+                Util.printProgress(i, files.length);
+                System.out.println('\r');
             }
         }
+        System.out.println();
     }
 
     @Override
@@ -94,33 +100,18 @@ public class PedDataSet implements DataSet
         return labels;
     }
 
-    /** Prefer this over BufferedImage.getSubImage because the underlying pixel
-     *  data is shared when using BufferedImage.getSubImage */
-    static BufferedImage copySubImage(BufferedImage im, int x, int y, int w, int h)
+    @Override
+    public PedDataSet select(ArrayList<Integer> indices)
     {
-        BufferedImage out = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
-        BufferedImage cropped = im.getSubimage(x, y, w, h);
+        ArrayList<ArrayList<float[]>> sdata = new ArrayList<ArrayList<float[]>>();
+        ArrayList<Integer> slabels = new ArrayList<Integer>();
 
-        Graphics g = out.getGraphics();
-        g.drawImage(cropped, 0, 0, null);
-        g.dispose();
+        for (int i : indices) {
+            sdata.add(data.get(i));
+            slabels.add(labels.get(i));
+        }
 
-        return out;
-    }
-
-    static void printProgress(int completed, int max)
-    {
-        int blocks = (int) (((float)completed/max)*40);
-
-        System.out.print('[');
-
-        for (int i=0; i<blocks; ++i)
-            System.out.print('=');
-
-        for (int i=blocks+1; i<40; ++i)
-            System.out.print('.');
-
-        System.out.printf(" %2d%% ]", (int)((float)completed/max*100));
+        return new PedDataSet(sdata, slabels);
     }
 
     public static void main(String[] args) throws IOException

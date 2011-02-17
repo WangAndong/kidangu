@@ -1,7 +1,6 @@
 package hog;
 
 import java.util.*;
-import java.util.concurrent.*;
 
 import april.jmat.*;
 
@@ -34,8 +33,8 @@ public class StrongClassifier
         // Add weak classifiers
         //
 
-        int nClassifiers = 18;
-        while (nClassifiers-- > 0) {
+        double FPR = 1.0, prevTPR = -1;
+        do {
             wt = LinAlg.normalizeL1(wt);
 
             //
@@ -44,12 +43,16 @@ public class StrongClassifier
             Random rand = new Random();
             LinearSVM best = LinearSVM.train(ds, wt, rand.nextInt(ds.numFeatures()));
             for (int i=0; i<250; ++i) {
+                System.out.println("Finding SVM: ");
+                Util.printProgress(i, 250);
+                System.out.print('\r');
+
                 LinearSVM c = LinearSVM.train(ds, wt, rand.nextInt(ds.numFeatures()));
                 best = (c.getTrainError() < best.getTrainError()) ? c : best;
             }
+            System.out.println();
 
             classifiers.add(best);
-            System.out.print('.');
 
             //
             //  Update weights based on misclassification
@@ -64,29 +67,63 @@ public class StrongClassifier
 
             //
             //  Adjust bias to bring down false negative rate.
-            //  while maintaining acceptable false postive rate.
+            //  while maintaining acceptable false positive rate.
             //
             final double biasStep = 1e-4;
-            while ( getPositiveRate(ds, true) < minTPR &&
-                    getPositiveRate(ds,false) < maxFPR ) {
+            while ( getTruePositiveRate(ds) < minTPR ) {
                 bias -= biasStep;
             }
 
             bias += biasStep; /* Undo the change that caused constraints to break */
+            FPR = getFalsePositiveRate(ds); /* Udpate FPR for the new bias setting */
 
-            if (getPositiveRate(ds, true) >= minTPR)
+            //
+            //  If the false positive rate becomes 1.0, this means that there is
+            //  no classification going on and this classifier is just letting all
+            //  data pass through (negatives can't be separated from the positives
+            //  at the required TPR). Time to complain.
+            //
+            if (FPR == 1) {
+                throw new ConvergenceFailure("StrongClassifier failed to converge");
+            }
+
+            //
+            //  If the TPR didn't improve, we don't hope to do better.
+            //  Time to say bye after removing the classifier we just added.
+            //
+            if (getTruePositiveRate(ds) == prevTPR) {
+                alpha.remove(alpha.size()-1);
+                classifiers.remove(classifiers.size()-1);
+                System.out.println("NFO: No improvement. Removed classifier");
                 break;
-        }
+            }
 
-        System.out.println();
-        System.out.printf("TPR: %.4f\n", getPositiveRate(ds, true));
-        System.out.printf("FPR: %.4f\n", getPositiveRate(ds, false));
-        System.out.println(alpha.size() + " Linear SVM classifiers");
+            prevTPR = getTruePositiveRate(ds);
 
-        if (getPositiveRate(ds, false) > maxFPR) {
-            throw new ConvergenceFailure("Strong classifier failed to converge "
-                    + "(" + getPositiveRate(ds, false) + " > " + maxFPR + ")" );
-        }
+            //
+            //  Output some information
+            //
+            Util.printBlocks(alpha.size(), '=', "[", "]");
+            System.out.println(" " + alpha.size() + " Classifiers ");
+            System.out.printf(" (TPR:%.4f, FPR:%.4f)", prevTPR, FPR);
+            System.out.print('\n');
+
+        } while( FPR < maxFPR );
+    }
+
+    public double getTruePositiveRate(DataSet ds)
+    {
+        return getPositiveRate(ds, true);
+    }
+
+    public double getFalsePositiveRate(DataSet ds)
+    {
+        return getPositiveRate(ds, false);
+    }
+
+    public int numClassifiers()
+    {
+        return alpha.size();
     }
 
     private double getPositiveRate(DataSet ds, boolean tORf)

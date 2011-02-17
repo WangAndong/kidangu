@@ -3,6 +3,7 @@ package hog;
 
 import hog.HOGBlocks.*;
 
+import java.io.*;
 import java.util.*;
 
 
@@ -44,4 +45,18 @@ public class PedDetector
         }
     }
 
+    public static void main(String[] args) throws IOException
+    {
+        PedDataSet ds = new PedDataSet(
+                new File("/home/rpradeep/studio/INRIAPerson/Train/pos"),
+                new File("/home/rpradeep/studio/INRIAPerson/Train/neg"),
+                true, new FilenameFilter() {
+                    public boolean accept(File dir, String name)
+                    {
+                        return name.endsWith(".png");
+                    }
+        });
+
+        RejectionCascade rc = new RejectionCascade(ds, 0.9975, 0.1);
+    }
 }

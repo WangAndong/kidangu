@@ -25,4 +25,7 @@ public interface DataSet
 
     /** Get all stored labels. Correspondence is by index */
     public ArrayList<Integer> getLabels();
+
+    /** SQL style select. Select instances with given indices */
+    public DataSet select(ArrayList<Integer> indices);
 }

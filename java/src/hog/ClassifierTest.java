@@ -5,6 +5,8 @@ import java.util.*;
 
 import javax.swing.*;
 
+import sun.reflect.generics.reflectiveObjects.*;
+
 import april.jmat.*;
 import april.jmat.geom.*;
 import april.util.*;
@@ -98,14 +100,15 @@ public class ClassifierTest
         pg.addListener(new ParameterListener() {
             public void parameterChanged(ParameterGUI pg, String name)
             {
-                StrongClassifier sc;
-                try {
-                    sc = new StrongClassifier(ds, pg.gd("tpr"), pg.gd("fpr"));
-                }
-                catch (ConvergenceFailure e) {
-                    e.printStackTrace();
-                    return;
-                }
+                RejectionCascade rc;
+//                try {
+//                    //sc = new StrongClassifier(ds, pg.gd("tpr"), pg.gd("fpr"));
+//                    rc = new RejectionCascade(ds, pg.gd("tpr"), pg.gd("fpr"));
+//                }
+//                catch (ConvergenceFailure e) {
+//                    e.printStackTrace();
+//                    return;
+//                }
 
                 VisWorld.Buffer vb = vc.getWorld().getBuffer("classifier");
 
@@ -117,20 +120,20 @@ public class ClassifierTest
                     vd1.add(new double[] {d[0], d[1], 0, ds.getLabel(i)});
                 }
                 vb.addBuffered(vd1);
+                vb.switchBuffer();
+
+                rc = new RejectionCascade(ds, pg.gd("tpr"), pg.gd("fpr"));
 
                 // Show points with classification labels
                 VisData vd2 = new VisData(new VisDataPointStyle(new ClassColorizer(), 12));
 
                 for (int i=0; i<ds.numInstances(); ++i) {
                     float[] d = ds.getInstance(i).get(0);
-                    int l = sc.predict(ds.getInstance(i));
+                    int l = rc.predict(ds.getInstance(i));
                     vd2.add(new double[] {d[0], d[1], 0.1, l});
                 }
+                vb.addBuffered(vd1);
                 vb.addBuffered(vd2);
-
-                // Show Lines
-                for (int i=0; i<sc.classifiers.size(); ++i)
-                    vb.addBuffered(getSeparatingLine(sc.classifiers.get(i)));
 
                 vb.switchBuffer();
             }
@@ -159,7 +162,7 @@ class ClassColorizer implements Colorizer
     @Override
     public int colorize(double[] p)
     {
-        return p[p.length-1] == 1 ? 0xff0000FF: 0xffFF0000;
+        return p[p.length-1] == 1 ? 0xff0088FF: 0xffFF8800;
     }
 }
 
@@ -168,7 +171,7 @@ class ClassColorizer2 implements Colorizer
     @Override
     public int colorize(double[] p)
     {
-        return p[p.length-1] == 1 ? 0xff000088: 0xff880000;
+        return p[p.length-1] == 1 ? 0xff004488: 0xff884400;
     }
 }
 
@@ -225,6 +228,12 @@ class XORDataSet implements DataSet
     {
         return 1;
     }
+
+    @Override
+    public DataSet select(ArrayList<Integer> indices)
+    {
+        throw new NotImplementedException();
+    }
 }
 
 class GaussianMixtureDataSet implements DataSet
@@ -244,11 +253,17 @@ class GaussianMixtureDataSet implements DataSet
                 data.add(LinAlg.copyFloats(p));
                 labels.add(1);
             } else {
-                double[] p = new double[] {2.8+g2.nextGaussian(), g2.nextGaussian()};
+                double[] p = new double[] {3+g2.nextGaussian(), 3+g2.nextGaussian()};
                 data.add(LinAlg.copyFloats(p));
                 labels.add(-1);
             }
         }
+    }
+
+    private GaussianMixtureDataSet(ArrayList<float[]> data, ArrayList<Integer> labels)
+    {
+        this.data = data;
+        this.labels = labels;
     }
 
     @Override
@@ -285,5 +300,19 @@ class GaussianMixtureDataSet implements DataSet
     public int numFeatures()
     {
         return 1;
+    }
+
+    @Override
+    public DataSet select(ArrayList<Integer> indices)
+    {
+        ArrayList<float[]> sdata = new ArrayList<float[]>();
+        ArrayList<Integer> slabel = new ArrayList<Integer>();
+
+        for (int i : indices) {
+            sdata.add(data.get(i));
+            slabel.add(labels.get(i));
+        }
+
+        return new GaussianMixtureDataSet(sdata, slabel);
     }
 }
