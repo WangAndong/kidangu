@@ -1,5 +1,7 @@
 package hog;
 
+import hog.StrongClassifier.*;
+
 import java.util.*;
 
 
@@ -7,15 +9,24 @@ public class RejectionCascade
 {
     ArrayList<StrongClassifier> cascade = new ArrayList<StrongClassifier>();
 
-    public RejectionCascade(DataSet ds, double minLevelTPR, double maxFPR)
+    static final double MIN_LEVEL_TPR = 0.9975; /** Min TPR At each cascade level */
+    static final double MAX_LEVEL_FPR = 0.7; /** Max FPR At each cascade level */
+
+    public RejectionCascade(DataSet ds, double targetFPR)
     {
         double FPR = 1.0;
-        do {
+        while (FPR > targetFPR) {
+            System.out.println();
+
             StrongClassifier sc;
             try {
-                sc = new StrongClassifier(ds, minLevelTPR, 0.7);
+                sc = new StrongClassifier(ds, MIN_LEVEL_TPR, MAX_LEVEL_FPR);
             }
             catch (ConvergenceFailure e) {
+                e.printStackTrace();
+                break;
+            }
+            catch (InterruptedException e) {
                 e.printStackTrace();
                 break;
             }
@@ -23,8 +34,8 @@ public class RejectionCascade
             cascade.add(sc);
             FPR *= sc.getFalsePositiveRate(ds);
 
-            System.out.println("NFO: Added strong classifier");
-            printDescription(minLevelTPR, FPR);
+            System.out.println("CASCADE: Added this strong classifier");
+            printDescription(MIN_LEVEL_TPR, FPR);
 
             ArrayList<Integer> selected = new ArrayList<Integer>();
             int nNegative = 0;
@@ -48,8 +59,7 @@ public class RejectionCascade
             }
 
             ds = ds.select(selected);
-
-        } while (FPR > maxFPR);
+        }
     }
 
     int predict(ArrayList<float[]> instance)
@@ -66,19 +76,21 @@ public class RejectionCascade
     void printDescription(double minTPR, double FPR)
     {
         System.out.println();
-        System.out.println("------------------------------------");
-        System.out.println("CASCADE DESCRIPTION");
-        System.out.println("------------------------------------");
+        System.out.println("***************************************************");
+        System.out.println("* CASCADE DESCRIPTION");
+        System.out.println("***************************************************");
 
         System.out.println(cascade.size() + " levels");
 
-        for (StrongClassifier sc1: cascade)
+        for (StrongClassifier sc1: cascade) {
             Util.printBlocks(sc1.numClassifiers(), '=', "[", "]");
+            System.out.println();
+        }
         System.out.println();
 
         System.out.println("False Positive Rate = " + FPR);
         System.out.println("Detection Rate = " + Math.pow(minTPR, cascade.size()));
 
-        System.out.println("------------------------------------");
+        System.out.println("***************************************************");
     }
 }

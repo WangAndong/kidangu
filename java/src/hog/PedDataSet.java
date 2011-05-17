@@ -52,8 +52,8 @@ public class PedDataSet implements DataSet
             labels.add(lbl);
 
             if (fVerbose) {
-                Util.printProgress(i, files.length);
-                System.out.println('\r');
+                Util.printProgress(i+1, files.length);
+                System.out.print('\r');
             }
         }
         System.out.println();

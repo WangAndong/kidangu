@@ -1,6 +1,9 @@
 package hog;
 
+import hog.SVMSearchThread.*;
+
 import java.util.*;
+import java.util.concurrent.atomic.*;
 
 import april.jmat.*;
 
@@ -16,7 +19,7 @@ public class StrongClassifier
     ArrayList<Double> alpha = new ArrayList<Double>();
     double bias = 0;
 
-    public StrongClassifier(DataSet ds, double minTPR, double maxFPR) throws ConvergenceFailure
+    public StrongClassifier(DataSet ds, double minTPR, double maxFPR) throws ConvergenceFailure, InterruptedException
     {
         double[] wt = new double[ds.numInstances()];
 
@@ -33,26 +36,45 @@ public class StrongClassifier
         // Add weak classifiers
         //
 
-        double FPR = 1.0, prevTPR = -1;
-        do {
+        double FPR = 1.0;
+        while (FPR > maxFPR) {
             wt = LinAlg.normalizeL1(wt);
 
             //
-            // Choose the best of 250 linear SVMs
+            // Choose the best of 250 linear SVMs. Do this on four threads
+            // to maximize CPU utilization.
             //
-            Random rand = new Random();
-            LinearSVM best = LinearSVM.train(ds, wt, rand.nextInt(ds.numFeatures()));
-            for (int i=0; i<250; ++i) {
-                System.out.println("Finding SVM: ");
-                Util.printProgress(i, 250);
-                System.out.print('\r');
+            final AtomicInteger doneCount = new AtomicInteger();
+            OnProgressCallBack ocb = new OnProgressCallBack() {
+                @Override
+                public synchronized void progress()
+                {
+                    System.out.print("Finding SVM " + alpha.size() + ": ");
+                    Util.printProgress(doneCount.get()+1, 250);
+                    System.out.print('\r');
+                }
+            };
 
-                LinearSVM c = LinearSVM.train(ds, wt, rand.nextInt(ds.numFeatures()));
-                best = (c.getTrainError() < best.getTrainError()) ? c : best;
+            ArrayList<SVMSearchThread> threads = new ArrayList<SVMSearchThread>();
+
+            for (int i=0; i<4; ++i) {
+                threads.add(new SVMSearchThread(ds, wt, 62, doneCount, ocb));
+                threads.get(i).start();
+            }
+
+            for (Thread t : threads) {
+                t.join();
             }
             System.out.println();
 
+            /* Find the best SVM found amongst the 4 threads */
+            LinearSVM best = null;
+            for (SVMSearchThread sst : threads) {
+                if (best==null || sst.getBest().getTrainError() < best.getTrainError())
+                    best = sst.getBest();
+            }
             classifiers.add(best);
+
 
             //
             //  Update weights based on misclassification
@@ -67,58 +89,54 @@ public class StrongClassifier
 
             //
             //  Adjust bias to bring down false negative rate.
-            //  while maintaining acceptable false positive rate.
+            //  We do this adjusting the bias based on the number of
+            //  false negatives.
             //
-            final double biasStep = 1e-4;
-            while ( getTruePositiveRate(ds) < minTPR ) {
-                bias -= biasStep;
+            PredictionResult pr = getPredictionResults(ds);
+
+            System.out.println("TPR = " + getTruePositiveRate(pr));
+            if (getTruePositiveRate(pr) < minTPR) {
+                System.out.println("Adjusting Bias ...");
+
+                Collections.sort(pr.falseNegatives);
+                int targetFN = (int) Math.ceil(pr.truePositives.size()*(1-minTPR));
+                targetFN = Math.min(targetFN, pr.falseNegatives.size()-1);
+
+                bias = pr.falseNegatives.get(targetFN);
+                System.out.println("bias = " + bias);
             }
 
-            bias += biasStep; /* Undo the change that caused constraints to break */
-            FPR = getFalsePositiveRate(ds); /* Udpate FPR for the new bias setting */
-
-            //
-            //  If the false positive rate becomes 1.0, this means that there is
-            //  no classification going on and this classifier is just letting all
-            //  data pass through (negatives can't be separated from the positives
-            //  at the required TPR). Time to complain.
-            //
-            if (FPR == 1) {
-                throw new ConvergenceFailure("StrongClassifier failed to converge");
-            }
-
-            //
-            //  If the TPR didn't improve, we don't hope to do better.
-            //  Time to say bye after removing the classifier we just added.
-            //
-            if (getTruePositiveRate(ds) == prevTPR) {
-                alpha.remove(alpha.size()-1);
-                classifiers.remove(classifiers.size()-1);
-                System.out.println("NFO: No improvement. Removed classifier");
-                break;
-            }
-
-            prevTPR = getTruePositiveRate(ds);
+            pr = getPredictionResults(ds);
+            FPR = getFalsePositiveRate(pr); /* Udpate FPR for the new bias setting */
 
             //
             //  Output some information
             //
-            Util.printBlocks(alpha.size(), '=', "[", "]");
-            System.out.println(" " + alpha.size() + " Classifiers ");
-            System.out.printf(" (TPR:%.4f, FPR:%.4f)", prevTPR, FPR);
-            System.out.print('\n');
-
-        } while( FPR < maxFPR );
+            System.out.print("Currently has " + alpha.size() + " Classifiers ");
+            System.out.printf("\t\t(TPR:%.4f, FPR:%.4f)\n\n", getTruePositiveRate(pr), FPR);
+        }
     }
 
     public double getTruePositiveRate(DataSet ds)
     {
-        return getPositiveRate(ds, true);
+        return getTruePositiveRate(getPredictionResults(ds));
+    }
+
+    public double getTruePositiveRate(PredictionResult pr)
+    {
+        double a = ((double)pr.falseNegatives.size()) / pr.truePositives.size();
+        return 1 / (1 + a);
     }
 
     public double getFalsePositiveRate(DataSet ds)
     {
-        return getPositiveRate(ds, false);
+        return getFalsePositiveRate(getPredictionResults(ds));
+    }
+
+    public double getFalsePositiveRate(PredictionResult pr)
+    {
+        double a = ((double)pr.trueNegatives.size()) / pr.falsePositives.size();
+        return 1 / (1 + a);
     }
 
     public int numClassifiers()
@@ -126,31 +144,27 @@ public class StrongClassifier
         return alpha.size();
     }
 
-    private double getPositiveRate(DataSet ds, boolean tORf)
+    PredictionResult getPredictionResults(DataSet ds)
     {
-        double nFalsePostives = 0;
-        double nTruePostives = 0;
-        double nPositives = 0;
-        double nNegatives = 0;
+        PredictionResult pr = new PredictionResult();
 
         for (int i=0; i<ds.numInstances(); ++i) {
-            int p = predict(ds.getInstance(i));
+            double p = weightedPrediction(ds.getInstance(i));
+            double t = ds.getLabel(i);
 
-            if (ds.getLabel(i)==1)
-                ++nPositives;
+            if (p>=bias && t==1)
+                pr.truePositives.add(p);
+            else if (p>=bias && t==-1)
+                pr.falsePositives.add(p);
+            else if (p<bias && t==-1)
+                pr.trueNegatives.add(p);
+            else if (p<bias && t==1)
+                pr.falseNegatives.add(p);
             else
-                ++nNegatives;
-
-            if (p==1 && (ds.getLabel(i)!= 1))
-                ++nFalsePostives;
-            else if (p==1 && (ds.getLabel(i)== 1))
-                ++nTruePostives;
+                throw new RuntimeException("Unexpected case: p=" + p + " t=" + t);
         }
 
-        if (tORf==true)
-            return nTruePostives/nPositives;
-        else
-            return nFalsePostives/nNegatives;
+        return pr;
     }
 
     /** returns {-1, 1} */
@@ -167,12 +181,66 @@ public class StrongClassifier
 
         return sumAlphaH;
     }
+
+    static class PredictionResult
+    {
+        ArrayList<Double> truePositives = new ArrayList<Double>();
+        ArrayList<Double> trueNegatives = new ArrayList<Double>();
+        ArrayList<Double> falsePositives = new ArrayList<Double>();
+        ArrayList<Double> falseNegatives = new ArrayList<Double>();
+    }
+
+    static class ConvergenceFailure extends Exception
+    {
+        public ConvergenceFailure(String msg)
+        {
+            super(msg);
+        }
+    }
 }
 
-class ConvergenceFailure extends Exception
+class SVMSearchThread extends Thread
 {
-    public ConvergenceFailure(String msg)
+    DataSet ds;
+    double[] wt;
+    AtomicInteger doneCount;
+    final int tries;
+    LinearSVM best;
+
+    OnProgressCallBack onProgress;
+
+    public SVMSearchThread(DataSet ds, double[] wt, int tries,
+            AtomicInteger doneCount, OnProgressCallBack ocb)
     {
-        super(msg);
+        this.ds = ds;
+        this.wt = wt;
+        this.doneCount = doneCount;
+        this.tries = tries;
+        this.onProgress = ocb;
+    }
+
+    @Override
+    public void run()
+    {
+        Random rand = new Random();
+
+        best = LinearSVM.train(ds, wt, rand.nextInt(ds.numFeatures()));
+        for (int i=0; i<tries-1; ++i) {
+            LinearSVM c = LinearSVM.train(ds, wt, rand.nextInt(ds.numFeatures()));
+            best = (c.getTrainError() < best.getTrainError()) ? c : best;
+
+            doneCount.getAndIncrement();
+            onProgress.progress();
+        }
+    }
+
+    public LinearSVM getBest()
+    {
+        return best;
+    }
+
+    interface OnProgressCallBack
+    {
+        void progress();
     }
 }

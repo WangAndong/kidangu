@@ -30,7 +30,7 @@ class LinearSVM
     /** Weights should be normalized (i.e. sum(wts)==1) */
     public static LinearSVM train(DataSet ds, double[] wts, int featureIdx)
     {
-        assert (LinAlg.normL1(wts)==1);
+        assert (Util.equalsF(LinAlg.normL1(wts), 1));
 
         Problem p = constructProblem(ds, wts, featureIdx);
         Parameter param = new Parameter(SolverType.L2R_L2LOSS_SVC_DUAL, 1, eps);
@@ -54,11 +54,18 @@ class LinearSVM
         return trainingErr;
     }
 
-    /** returns {-1, 1} */
-    public int predict(ArrayList<float[]> instance)
+    /** returns {-1,1} */
+    public double predict(ArrayList<float[]> instance)
     {
         float[] x = instance.get(featureIdx);
         return Linear.predict(svm, convertToFeatureNode(x, svm.getBias()));
+
+//        double[] dv = new double[1];
+//        Linear.predictValues(svm, convertToFeatureNode(x, svm.getBias()), dv);
+//
+//        if (Double.isNaN(dv[0]))
+//        else
+//            return dv[0];
     }
 
     public boolean wasMisClassified(int instanceIndex)

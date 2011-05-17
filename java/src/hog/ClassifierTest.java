@@ -5,8 +5,6 @@ import java.util.*;
 
 import javax.swing.*;
 
-import sun.reflect.generics.reflectiveObjects.*;
-
 import april.jmat.*;
 import april.jmat.geom.*;
 import april.util.*;
@@ -38,8 +36,10 @@ public class ClassifierTest
         pg.addListener(new ParameterListener() {
             public void parameterChanged(ParameterGUI pg, String name)
             {
-                XORDataSet ds = new XORDataSet();
-                double[] Wts = LinAlg.normalizeL1(new double[] {1, 1, 1, pg.gd("w")});
+                GaussianMixtureDataSet ds = new GaussianMixtureDataSet();
+                double[] Wts = new double[ds.numInstances()];
+                Arrays.fill(Wts, 1);
+                //double[] Wts = //LinAlg.normalizeL1(new double[] {1, 1, 1, pg.gd("w")});
 
                 LinearSVM svm = LinearSVM.train(ds, Wts, 0);
                 jf.setTitle("Error: " + svm.getTrainError());
@@ -52,9 +52,6 @@ public class ClassifierTest
                 for (int i=0; i<ds.numInstances(); ++i) {
                     float[] d = ds.getInstance(i).get(0);
                     vd1.add(new double[] {d[0], d[1], 0, ds.getLabel(i)});
-
-                    vb.addBuffered(new VisText(
-                            new double[] {d[0], d[1], 5}, ANCHOR.TOP_LEFT, "   "+Wts[i]));
                 }
                 vb.addBuffered(vd1);
 
@@ -66,9 +63,12 @@ public class ClassifierTest
 
                 for (int i=0; i<ds.numInstances(); ++i) {
                     float[] d = ds.getInstance(i).get(0);
-                    int l = svm.predict(ds.getInstance(i));
+                    double l = svm.predict(ds.getInstance(i));
                     System.out.println(l);
                     vd2.add(new double[] {d[0], d[1], 0.1, l});
+
+                    vb.addBuffered(new VisText(
+                            new double[] {d[0], d[1], 5}, ANCHOR.TOP_LEFT, "   "+String.format("%.2f", l)));
                 }
                 vb.addBuffered(vd2);
 
@@ -91,8 +91,7 @@ public class ClassifierTest
         jf.add(vc, BorderLayout.CENTER);
 
         ParameterGUI pg = new ParameterGUI();
-        pg.addDoubleSlider("tpr", "True Positive Rate", 0, 1, 0.9975);
-        pg.addDoubleSlider("fpr", "False Positive Rate", 0, 1, 0.7);
+        pg.addDoubleSlider("fpr", "False Positive Rate", 0, 1, 0.1);
         jf.add(pg, BorderLayout.SOUTH);
 
         final GaussianMixtureDataSet ds = new GaussianMixtureDataSet();
@@ -100,16 +99,6 @@ public class ClassifierTest
         pg.addListener(new ParameterListener() {
             public void parameterChanged(ParameterGUI pg, String name)
             {
-                RejectionCascade rc;
-//                try {
-//                    //sc = new StrongClassifier(ds, pg.gd("tpr"), pg.gd("fpr"));
-//                    rc = new RejectionCascade(ds, pg.gd("tpr"), pg.gd("fpr"));
-//                }
-//                catch (ConvergenceFailure e) {
-//                    e.printStackTrace();
-//                    return;
-//                }
-
                 VisWorld.Buffer vb = vc.getWorld().getBuffer("classifier");
 
                 // Show points with original labels
@@ -122,7 +111,7 @@ public class ClassifierTest
                 vb.addBuffered(vd1);
                 vb.switchBuffer();
 
-                rc = new RejectionCascade(ds, pg.gd("tpr"), pg.gd("fpr"));
+                RejectionCascade rc = new RejectionCascade(ds, pg.gd("fpr"));
 
                 // Show points with classification labels
                 VisData vd2 = new VisData(new VisDataPointStyle(new ClassColorizer(), 12));
@@ -162,7 +151,7 @@ class ClassColorizer implements Colorizer
     @Override
     public int colorize(double[] p)
     {
-        return p[p.length-1] == 1 ? 0xff0088FF: 0xffFF8800;
+        return p[p.length-1] >= 0 ? 0xff0088FF: 0xffFF8800;
     }
 }
 
@@ -171,7 +160,7 @@ class ClassColorizer2 implements Colorizer
     @Override
     public int colorize(double[] p)
     {
-        return p[p.length-1] == 1 ? 0xff004488: 0xff884400;
+        return p[p.length-1] >= 0 ? 0xff004488: 0xff884400;
     }
 }
 
@@ -232,7 +221,7 @@ class XORDataSet implements DataSet
     @Override
     public DataSet select(ArrayList<Integer> indices)
     {
-        throw new NotImplementedException();
+        throw new RuntimeException("Not implemented");
     }
 }
 
@@ -253,7 +242,7 @@ class GaussianMixtureDataSet implements DataSet
                 data.add(LinAlg.copyFloats(p));
                 labels.add(1);
             } else {
-                double[] p = new double[] {3+g2.nextGaussian(), 3+g2.nextGaussian()};
+                double[] p = new double[] {2+g2.nextGaussian(), 2+g2.nextGaussian()};
                 data.add(LinAlg.copyFloats(p));
                 labels.add(-1);
             }

@@ -1,9 +1,9 @@
 <?xml version="1.0" ?>
 
-<project name="franco" default="build" basedir=".">
+<project name="kidangu" default="build" basedir=".">
 
   <!-- Build everything -->
-  <target name="build" depends="build-java"/>
+  <target name="kidangu" depends="build-java"/>
 
   <!-- Clean everything -->
   <target name="clean" depends="clean-java"/>

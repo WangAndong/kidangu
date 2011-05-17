@@ -47,4 +47,10 @@ public class Util
             System.out.print('=');
         System.out.print(suffix);
     }
+
+    /** true if two values differ by less than 1E-5 */
+    public static boolean equalsF(double a, double b)
+    {
+        return Math.abs(a-b) < 1e-5;
+    }
 }
