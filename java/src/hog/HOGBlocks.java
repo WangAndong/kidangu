@@ -18,10 +18,10 @@ public class HOGBlocks
 
     public static class DescriptorInfo
     {
-        final int x;
-        final int y;
-        final int width;
-        final int height;
+        public final int x;
+        public final int y;
+        public final int width;
+        public final int height;
 
         public DescriptorInfo(int x, int y, int width, int height)
         {
@@ -67,7 +67,7 @@ public class HOGBlocks
         }
 
         // TODO: Does L2 norm perform better
-        float norm = ihog.norm(x, y, x+blockWidth-1, blockHeight-1);
+        float norm = ihog.norm(x, y, x+blockWidth-1, y+blockHeight-1);
         return LinAlg.scale(v, 1.0/norm);
     }
 
@@ -75,7 +75,6 @@ public class HOGBlocks
     {
         HOGBlocks hogBlocks = new HOGBlocks(im);
         ArrayList<float[]> descs = new ArrayList<float[]>();
-
 
         for (DescriptorInfo ifo : dinfo)
             descs.add(hogBlocks.getDescriptor(ifo));

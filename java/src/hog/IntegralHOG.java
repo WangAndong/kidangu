@@ -44,8 +44,9 @@ public class IntegralHOG
         for (int i=0; i<fim.d.length; ++i) {
             float[] xy = new float[] {xgim.d[i], ygim.d[i]};
 
-            float theta = (float) Math.abs(MathUtil.atan2(xy[0], xy[1]));
-            int idx = (int) ((CBINS-1)*theta / Math.PI);
+            // TODO: Try using unsigned angles as done in paper
+            float theta = (float) (MathUtil.atan2(xy[0], xy[1]) + Math.PI);
+            int idx = (int) Math.round((CBINS-1)*theta / (2*Math.PI));
 
             mag[i] = LinAlg.magnitude(xy);
             bin[idx][i] = mag[i];
@@ -60,7 +61,7 @@ public class IntegralHOG
     }
 
     /** HOG from x0,y0 (inclusive) to x1,y1 (inclusive) */
-    float[] hog(int x0, int x1, int y0, int y1)
+    float[] hog(int x0, int y0, int x1, int y1)
     {
         float[] h = new float[CBINS];
 
@@ -72,7 +73,7 @@ public class IntegralHOG
     }
 
     /** HOG from x0,y0 (inclusive) to x1,y1 (inclusive) */
-    float norm(int x0, int x1, int y0, int y1)
+    float norm(int x0, int y0, int x1, int y1)
     {
         return iimNorm.sum(x0, y0, x1, y1);
     }

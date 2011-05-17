@@ -7,7 +7,7 @@ public class Util
 {
     /** Prefer this over BufferedImage.getSubImage because the underlying pixel
      *  data is shared when using BufferedImage.getSubImage */
-    static BufferedImage copySubImage(BufferedImage im, int x, int y, int w, int h)
+    public static BufferedImage copySubImage(BufferedImage im, int x, int y, int w, int h)
     {
         BufferedImage out = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
         BufferedImage cropped = im.getSubimage(x, y, w, h);

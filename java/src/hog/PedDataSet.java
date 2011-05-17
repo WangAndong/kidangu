@@ -44,6 +44,7 @@ public class PedDataSet implements DataSet
             BufferedImage im = ImageIO.read(files[i]);
 
             /* Get the centered 64x128 pixels */
+            // TODO: Do this in the HOG stage to avoid boundary effects
             int W = im.getWidth();
             int H = im.getHeight();
             im = Util.copySubImage(im, W/2-32, H/2-64, 64, 128);
@@ -116,8 +117,9 @@ public class PedDataSet implements DataSet
 
     public static void main(String[] args) throws IOException
     {
-        new PedDataSet(new File("/home/rpradeep/studio/INRIAPerson/Train/pos"),
-                new File("/home/rpradeep/studio/INRIAPerson/Train/neg"),
+        new PedDataSet(
+                new File("/home/rpradeep/studio/inria-person/train_64x128_H96/pos"),
+                new File("/home/rpradeep/studio/inria-person/train_64x128_H96/neg"),
                 true, new FilenameFilter() {
                     public boolean accept(File dir, String name)
                     {

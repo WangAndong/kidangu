@@ -1,4 +1,6 @@
-package hog;
+package test;
+
+import hog.*;
 
 import java.awt.*;
 import java.util.*;
@@ -12,7 +14,7 @@ import april.vis.*;
 import april.vis.VisText.*;
 
 
-public class ClassifierTest
+class ClassifierTest
 {
     public static void main(String[] args)
     {
@@ -135,7 +137,7 @@ public class ClassifierTest
 
     private static VisData getSeparatingLine(LinearSVM svm)
     {
-        double[] w = svm.svm.getFeatureWeights();
+        double[] w = svm.getFeatureWeights();
         GLine2D line = new GLine2D(-w[0]/w[1], -w[2]/w[1]);
         VisData vdLine = new VisData(new VisDataLineStyle(Color.gray, 2));
 

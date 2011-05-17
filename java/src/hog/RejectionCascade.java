@@ -62,7 +62,7 @@ public class RejectionCascade
         }
     }
 
-    int predict(ArrayList<float[]> instance)
+    public int predict(ArrayList<float[]> instance)
     {
         for (StrongClassifier sc : cascade) {
             if (sc.predict(instance) == -1)

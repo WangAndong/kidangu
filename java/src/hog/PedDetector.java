@@ -48,8 +48,8 @@ public class PedDetector
     public static void main(String[] args) throws IOException
     {
         PedDataSet ds = new PedDataSet(
-                new File("/home/rpradeep/studio/INRIAPerson/Train/pos"),
-                new File("/home/rpradeep/studio/INRIAPerson/Train/neg"),
+                new File("/home/rpradeep/studio/inria-person/train_64x128_H96/pos"),
+                new File("/home/rpradeep/studio/inria-person/train_64x128_H96/neg"),
                 true, new FilenameFilter() {
                     public boolean accept(File dir, String name)
                     {

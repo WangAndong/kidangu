@@ -3,12 +3,13 @@
 <project name="kidangu" default="build" basedir=".">
 
   <!-- Build everything -->
-  <target name="kidangu" depends="build-java"/>
+  <target name="build" depends="build-java,build-jar"/>
 
   <!-- Clean everything -->
   <target name="clean" depends="clean-java"/>
 
   <target name="build-java">
+    <mkdir dir="build"/>
     <javac
        srcdir="src"
        includes="**/*.java"
@@ -21,6 +22,22 @@
        target="1.5"
        >
     </javac>
+  </target>
+
+  <!-- Build Jar -->
+  <target name="build-jar">
+    <jar destfile="kidangu.jar" compress="true">
+
+      <fileset dir="build">
+	<include name="**/*.class" />
+	<include name="*.class" />
+      </fileset>
+
+      <fileset dir="src">
+	<include name="**/*.png" />
+      </fileset>
+    </jar>
+    <copy file="kidangu.jar" todir="." />
   </target>
 
   <target name="clean-java" >

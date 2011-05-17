@@ -10,7 +10,7 @@ import april.jmat.*;
 /**
  *  Wrapper for LibLinear.Model
  */
-class LinearSVM
+public class LinearSVM
 {
     static final double eps = 1e-10;
 
@@ -54,18 +54,16 @@ class LinearSVM
         return trainingErr;
     }
 
+    public double[] getFeatureWeights()
+    {
+        return svm.getFeatureWeights();
+    }
+
     /** returns {-1,1} */
     public double predict(ArrayList<float[]> instance)
     {
         float[] x = instance.get(featureIdx);
         return Linear.predict(svm, convertToFeatureNode(x, svm.getBias()));
-
-//        double[] dv = new double[1];
-//        Linear.predictValues(svm, convertToFeatureNode(x, svm.getBias()), dv);
-//
-//        if (Double.isNaN(dv[0]))
-//        else
-//            return dv[0];
     }
 
     public boolean wasMisClassified(int instanceIndex)
