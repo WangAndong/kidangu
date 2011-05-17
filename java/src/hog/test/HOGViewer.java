@@ -1,4 +1,4 @@
-package test;
+package hog.test;
 
 import hog.*;
 import hog.HOGBlocks.*;
@@ -38,6 +38,7 @@ public class HOGViewer
         pg.addIntSlider("bsize", "lg2(Block Size)", 2, 6, 3);
         pg.addDoubleSlider("contrast", "contrast", 0, 50, 10);
         pg.addIntSlider("alpha", "Image alpha", 0, 255, 10);
+        pg.addBoolean("fnorm", "Normalize", true);
         jf.add(pg, BorderLayout.SOUTH);
 
         final MyParamListener listener = new MyParamListener(vc, im, H, W);
@@ -90,7 +91,7 @@ public class HOGViewer
                     dinfo.add(new DescriptorInfo(i, j, BSIZE, BSIZE));
                 }
 
-            ArrayList<float[]> descs = HOGBlocks.getDescriptors(im, dinfo);
+            ArrayList<float[]> descs = HOGBlocks.getDescriptors(im, dinfo, pg.gb("fnorm"));
             final VisWorld.Buffer vb = vc.getWorld().getBuffer("content");
             ColorMapper cm = ColorMapper.makeGray(0, pg.gd("contrast"));
 

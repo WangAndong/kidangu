@@ -1,4 +1,4 @@
-package test;
+package hog.test;
 
 import hog.*;
 
@@ -18,8 +18,8 @@ class ClassifierTest
 {
     public static void main(String[] args)
     {
-        testStrongClassifier();
-        //testLinearSVM();
+        //testStrongClassifier();
+        testLinearSVM();
     }
 
     private static void testLinearSVM()

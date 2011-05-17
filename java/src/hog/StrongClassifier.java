@@ -1,8 +1,7 @@
 package hog;
 
-import hog.SVMSearchThread.*;
-
 import java.util.*;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 
 import april.jmat.*;
@@ -19,7 +18,8 @@ public class StrongClassifier
     ArrayList<Double> alpha = new ArrayList<Double>();
     double bias = 0;
 
-    public StrongClassifier(DataSet ds, double minTPR, double maxFPR) throws ConvergenceFailure, InterruptedException
+    public StrongClassifier(DataSet ds, double minTPR, double maxFPR)
+        throws ConvergenceFailure, InterruptedException, ExecutionException
     {
         double[] wt = new double[ds.numInstances()];
 
@@ -35,6 +35,8 @@ public class StrongClassifier
         //
         // Add weak classifiers
         //
+        final int NTHREADS = 8;
+        ExecutorService exec = Executors.newFixedThreadPool(NTHREADS);
 
         double FPR = 1.0;
         while (FPR > maxFPR) {
@@ -45,31 +47,42 @@ public class StrongClassifier
             // to maximize CPU utilization.
             //
             final AtomicInteger doneCount = new AtomicInteger();
-            OnProgressCallBack ocb = new OnProgressCallBack() {
-                @Override
-                public synchronized void progress()
-                {
+            final int PER_THREAD = (250/NTHREADS)+1;
+            final int TOTAL = PER_THREAD * NTHREADS;
+
+            ArrayList<SVMSearchTask> tasks = new ArrayList<SVMSearchTask>();
+            ArrayList<Future> futures = new ArrayList<Future>();
+            for (int i=0; i<NTHREADS; ++i) {
+                final SVMSearchTask task = new SVMSearchTask(ds, wt, PER_THREAD, doneCount);
+                tasks.add(task);
+
+                Future f = exec.submit(task);
+                futures.add(f);
+            }
+
+            Object dummy = new Object();
+            for (Future f : futures) {
+                Object ret = dummy;
+                while (ret != null) {
+                    try {
+                        ret = f.get(1, TimeUnit.SECONDS);
+                    } catch (TimeoutException e) { }
+
                     System.out.print("Finding SVM " + alpha.size() + ": ");
-                    Util.printProgress(doneCount.get()+1, 250);
+                    Util.printProgress(doneCount.get()+1, TOTAL);
                     System.out.print('\r');
                 }
-            };
-
-            ArrayList<SVMSearchThread> threads = new ArrayList<SVMSearchThread>();
-
-            for (int i=0; i<4; ++i) {
-                threads.add(new SVMSearchThread(ds, wt, 62, doneCount, ocb));
-                threads.get(i).start();
             }
 
-            for (Thread t : threads) {
-                t.join();
-            }
+
+            System.out.print("Finding SVM " + alpha.size() + ": ");
+            Util.printProgress(doneCount.get()+1, TOTAL);
+            System.out.print('\r');
             System.out.println();
 
             /* Find the best SVM found amongst the 4 threads */
             LinearSVM best = null;
-            for (SVMSearchThread sst : threads) {
+            for (SVMSearchTask sst : tasks) {
                 if (best==null || sst.getBest().getTrainError() < best.getTrainError())
                     best = sst.getBest();
             }
@@ -199,7 +212,7 @@ public class StrongClassifier
     }
 }
 
-class SVMSearchThread extends Thread
+class SVMSearchTask implements Runnable
 {
     DataSet ds;
     double[] wt;
@@ -207,16 +220,12 @@ class SVMSearchThread extends Thread
     final int tries;
     LinearSVM best;
 
-    OnProgressCallBack onProgress;
-
-    public SVMSearchThread(DataSet ds, double[] wt, int tries,
-            AtomicInteger doneCount, OnProgressCallBack ocb)
+    public SVMSearchTask(DataSet ds, double[] wt, int tries, AtomicInteger doneCount)
     {
         this.ds = ds;
         this.wt = wt;
         this.doneCount = doneCount;
         this.tries = tries;
-        this.onProgress = ocb;
     }
 
     @Override
@@ -230,17 +239,11 @@ class SVMSearchThread extends Thread
             best = (c.getTrainError() < best.getTrainError()) ? c : best;
 
             doneCount.getAndIncrement();
-            onProgress.progress();
         }
     }
 
     public LinearSVM getBest()
     {
         return best;
-    }
-
-    interface OnProgressCallBack
-    {
-        void progress();
     }
 }

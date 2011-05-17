@@ -14,6 +14,7 @@ import april.jmat.*;
  */
 public class HOGBlocks
 {
+    final boolean fNormalize;
     final IntegralHOG ihog;
 
     public static class DescriptorInfo
@@ -34,8 +35,14 @@ public class HOGBlocks
 
     public HOGBlocks(BufferedImage im)
     {
+        this(im, true);
+    }
+
+    public HOGBlocks(BufferedImage im, boolean fNormalize)
+    {
         float[] pixels = FloatImage.imageToFloats(im);
         ihog = new IntegralHOG(new FloatImage(im.getWidth(), im.getHeight(), pixels));
+        this.fNormalize = fNormalize;
     }
 
     public float[] getDescriptor(DescriptorInfo d)
@@ -67,13 +74,24 @@ public class HOGBlocks
         }
 
         // TODO: Does L2 norm perform better
-        float norm = ihog.norm(x, y, x+blockWidth-1, y+blockHeight-1);
-        return LinAlg.scale(v, 1.0/norm);
+        if (fNormalize) {
+            float norm = ihog.norm(x, y, x+blockWidth-1, y+blockHeight-1);
+            return LinAlg.scale(v, 1.0/norm);
+        } else {
+            return v;
+        }
     }
 
-    public static ArrayList<float[]> getDescriptors(BufferedImage im, ArrayList<DescriptorInfo> dinfo)
+    public static ArrayList<float[]> getDescriptors(
+            BufferedImage im, ArrayList<DescriptorInfo> dinfo)
     {
-        HOGBlocks hogBlocks = new HOGBlocks(im);
+        return getDescriptors(im, dinfo, true);
+    }
+
+    public static ArrayList<float[]> getDescriptors(
+            BufferedImage im, ArrayList<DescriptorInfo> dinfo, boolean fNormalize)
+    {
+        HOGBlocks hogBlocks = new HOGBlocks(im, fNormalize);
         ArrayList<float[]> descs = new ArrayList<float[]>();
 
         for (DescriptorInfo ifo : dinfo)

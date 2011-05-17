@@ -3,6 +3,7 @@ package hog;
 import hog.StrongClassifier.*;
 
 import java.util.*;
+import java.util.concurrent.*;
 
 
 public class RejectionCascade
@@ -18,7 +19,7 @@ public class RejectionCascade
         while (FPR > targetFPR) {
             System.out.println();
 
-            StrongClassifier sc;
+            StrongClassifier sc = null;
             try {
                 sc = new StrongClassifier(ds, MIN_LEVEL_TPR, MAX_LEVEL_FPR);
             }
@@ -27,6 +28,10 @@ public class RejectionCascade
                 break;
             }
             catch (InterruptedException e) {
+                e.printStackTrace();
+                break;
+            }
+            catch (ExecutionException e) {
                 e.printStackTrace();
                 break;
             }
