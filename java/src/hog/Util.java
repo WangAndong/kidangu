@@ -19,7 +19,7 @@ public class Util
         return out;
     }
 
-    static void printProgress(int completed, int max)
+    public static void printProgress(int completed, int max)
     {
         int blocks = (int) (((float)completed/max)*40);
 

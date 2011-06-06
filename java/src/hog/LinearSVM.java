@@ -115,7 +115,7 @@ public class LinearSVM
         Problem p = new Problem();
         p.bias = 1;
         p.l = nodes.length;
-        p.n = features.get(0).length + 1;
+        p.n = features.get(0).length + 1 /*bias term*/;
         p.x = nodes;
         p.y = y;
         p.W = wts;

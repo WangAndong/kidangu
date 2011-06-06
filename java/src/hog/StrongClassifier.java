@@ -35,7 +35,7 @@ public class StrongClassifier
         //
         // Add weak classifiers
         //
-        final int NTHREADS = 8;
+        final int NTHREADS = 4;
         ExecutorService exec = Executors.newFixedThreadPool(NTHREADS);
 
         double FPR = 1.0;
@@ -96,6 +96,10 @@ public class StrongClassifier
             final double rho =(1-eps)/eps;
             alpha.add(Math.log(rho));
 
+            bias = 0;
+            for (double a : alpha)
+                bias += 0.5*a;
+
             for (int i=0; i<wt.length; ++i) {
                 wt[i] *= best.wasMisClassified(i) ? rho : 1;
             }
@@ -106,8 +110,8 @@ public class StrongClassifier
             //  false negatives.
             //
             PredictionResult pr = getPredictionResults(ds);
-
             System.out.println("TPR = " + getTruePositiveRate(pr));
+
             if (getTruePositiveRate(pr) < minTPR) {
                 System.out.println("Adjusting Bias ...");
 
@@ -117,6 +121,8 @@ public class StrongClassifier
 
                 bias = pr.falseNegatives.get(targetFN);
                 System.out.println("bias = " + bias);
+                pr = getPredictionResults(ds);
+                System.out.println("now TPR = " + getTruePositiveRate(pr));
             }
 
             pr = getPredictionResults(ds);
@@ -162,7 +168,7 @@ public class StrongClassifier
         PredictionResult pr = new PredictionResult();
 
         for (int i=0; i<ds.numInstances(); ++i) {
-            double p = weightedPrediction(ds.getInstance(i));
+            double p = getPredictionWeight(ds.getInstance(i));
             double t = ds.getLabel(i);
 
             if (p>=bias && t==1)
@@ -183,14 +189,16 @@ public class StrongClassifier
     /** returns {-1, 1} */
     public int predict(ArrayList<float[]> instance)
     {
-        return weightedPrediction(instance) >= bias ? 1 : -1;
+        return getPredictionWeight(instance) >= bias ? 1 : -1;
     }
 
-    private double weightedPrediction(ArrayList<float[]> instance)
+    private double getPredictionWeight(ArrayList<float[]> instance)
     {
         double sumAlphaH = 0;
-        for (int i=0; i<alpha.size(); ++i)
-            sumAlphaH += alpha.get(i) * classifiers.get(i).predict(instance);
+        for (int i=0; i<alpha.size(); ++i) {
+            final double label = classifiers.get(i).predict(instance) == 1 ? 1 : 0;
+            sumAlphaH += alpha.get(i) * label;
+        }
 
         return sumAlphaH;
     }

@@ -18,8 +18,8 @@ class ClassifierTest
 {
     public static void main(String[] args)
     {
-        //testStrongClassifier();
-        testLinearSVM();
+        testStrongClassifier();
+        //testLinearSVM();
     }
 
     private static void testLinearSVM()
@@ -224,6 +224,28 @@ class XORDataSet implements DataSet
     public DataSet select(ArrayList<Integer> indices)
     {
         throw new RuntimeException("Not implemented");
+    }
+
+    public ArrayList<double[]> selectPositive()
+    {
+        ArrayList<double[]> sdata = new ArrayList<double[]>();
+        for (int i=0; i<data.size(); ++i) {
+            if (labels.get(i)==1)
+                sdata.add(LinAlg.copyDoubles(data.get(i)));
+        }
+
+        return sdata;
+    }
+
+    public ArrayList<double[]> selectNegative()
+    {
+        ArrayList<double[]> sdata = new ArrayList<double[]>();
+        for (int i=0; i<data.size(); ++i) {
+            if (labels.get(i)==-1)
+                sdata.add(LinAlg.copyDoubles(data.get(i)));
+        }
+
+        return sdata;
     }
 }
 
