@@ -33,15 +33,17 @@ public class BoostedClassifierTest
         final ConcentricCircleDataSet cds = new ConcentricCircleDataSet();
 
         final VisWorld.Buffer vb = vc.getWorld().getBuffer("content");
-        final BoostedClassifier bc = new BoostedClassifier(cds);
+        final BoostedClassifier bc = new BoostedClassifier(cds, 1);
 
         while (true) {
             System.out.println(bc.numClassifiers());
             bc.addWeakClassifier();
-            final PredictionStats ps = bc.predict(cds);
+            PredictionStats ps = bc.predict(cds);
 
             if (ps.tpRate < 0.9975)
                 bc.tune(ps, 0.9975);
+
+            ps = bc.predict(cds);
 
             if (ps.fpRate > 0.3)
                 break;

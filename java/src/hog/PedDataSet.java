@@ -69,7 +69,7 @@ public class PedDataSet implements DataSet
     @Override
     public int numFeatures()
     {
-        return 1;
+        return PedDetector.descriptorInfo.size();
     }
 
     @Override

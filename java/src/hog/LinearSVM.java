@@ -1,5 +1,6 @@
 package hog;
 
+import java.io.*;
 import java.util.*;
 
 import liblinear.*;
@@ -121,5 +122,20 @@ public class LinearSVM
         p.W = wts;
 
         return p;
+    }
+
+    public void save(PrintStream out)
+    {
+        out.println("featureIndex = " + this.featureIdx + ";");
+
+        out.println("plane = [");
+        for (double v : getFeatureWeights())
+            out.print("" + v + ",");
+        out.println("];");
+
+        out.print("labels = [");
+        for (int v : svm.getLabels())
+            out.print("" + v + ",");
+        out.println("];");
     }
 }

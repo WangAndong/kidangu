@@ -1,5 +1,6 @@
 package hog;
 
+import java.io.*;
 import java.util.*;
 
 import april.jmat.*;
@@ -20,7 +21,8 @@ public class BoostedClassifier
     ArrayList<Double> alpha = new ArrayList<Double>();
     double bias = 0;
 
-    public BoostedClassifier(DataSet ds)
+
+    public BoostedClassifier(DataSet ds, int nClassifiers)
     {
         this.ds = ds;
         wt = new double[ds.numInstances()];
@@ -32,23 +34,29 @@ public class BoostedClassifier
             wt[i] = (ds.getLabel(i) == 1) ? (1.0/nPositive) : (1.0/nNegative);
         }
 
-        addWeakClassifier();
+        while (nClassifiers-- != 0) {
+            addWeakClassifier();
+        }
     }
 
     public LinearSVM addWeakClassifier()
     {
         wt = LinAlg.normalizeL1(wt);
-        Random rand = new Random();
 
-        LinearSVM best = LinearSVM.train(ds, wt, rand.nextInt(ds.numFeatures()));
-        for (int i=1; i<250; ++i) {
-            LinearSVM c = LinearSVM.train(ds, wt, rand.nextInt(ds.numFeatures()));
+        LinearSVM best = LinearSVM.train(ds, wt, 0);
+        for (int i=0; i<ds.numFeatures(); ++i) {
+            System.out.printf("Weak classifier #%d: ", classifiers.size()+1);
+            Util.printProgress(i, ds.numFeatures());
+            System.out.print('\r');
+
+            LinearSVM c = LinearSVM.train(ds, wt, i);
             best = (c.getTrainError() < best.getTrainError()) ? c : best;
         }
 
         /* Update alpha for classifier */
         double eps = best.getTrainError();
         assert (eps < 1);
+        System.out.printf("\nBest feature has training error %.4f\n", eps);
 
         double alpha = Math.log((1-eps)/eps);
         this.alpha.add(alpha);
@@ -112,7 +120,6 @@ public class BoostedClassifier
         return predict(vote, thresh);
     }
 
-
     public PredictionStats predict(DataSet ds)
     {
         int count[][] = new int[2][2];
@@ -131,9 +138,6 @@ public class BoostedClassifier
             }
         }
 
-        assert (count[1][1] + count[1][0] == nPositive);
-        assert (count[0][1] + count[0][0] == nNegative);
-
         double tpr = ((double)count[1][1]) / (count[1][1] + count[1][0]);
         double fpr = ((double)count[0][1]) / (count[0][1] + count[0][0]);
 
@@ -145,26 +149,10 @@ public class BoostedClassifier
     {
         Collections.sort(ps.posInstVotes);
 
-        /* Build a histogram of the votes */
-        TreeMap<Double, Integer> hist = new TreeMap<Double, Integer>();
-        for (Double v: ps.posInstVotes) {
-            Integer count = hist.get(v);
-            if (count == null)
-                count = 0;
-
-            hist.put(v, ++count);
-        }
-
         final double thresh = getCombinedThreshold();
-
-        System.out.printf("%.4f\t", thresh);
-        for (Double v: hist.keySet()) {
-            System.out.printf("%.4f:%d, ", v, hist.get(v));
-        }
-        System.out.println();
-
         int index = (int) (ps.posInstVotes.size()*(1-truePositiveRate));
         index = index < 0 ? 0 : index;
+
         this.bias = ps.posInstVotes.get(index) - thresh;
     }
 
@@ -190,5 +178,19 @@ public class BoostedClassifier
     public double getBias()
     {
         return this.bias;
+    }
+
+    public void save(PrintStream out)
+    {
+        out.println("bias = " + bias + ";");
+
+        out.println("classifiers {");
+        for (int i=0; i<classifiers.size(); ++i) {
+            out.printf("svm%d {\n", i+1);
+            out.println("weight = " + alpha.get(i) + ";");
+            classifiers.get(i).save(out);
+            out.println("}\n");
+        }
+        out.println("}");
     }
 }

@@ -48,8 +48,7 @@ public class PedDetector
     public static void main(String[] args) throws IOException
     {
         PedDataSet ds = new PedDataSet(
-                new File("/home/rpradeep/studio/inria-person/train_64x128_H96/pos"),
-                new File("/home/rpradeep/studio/inria-person/train_64x128_H96/neg"),
+                new File(args[0]), new File(args[1]),
                 true, new FilenameFilter() {
                     public boolean accept(File dir, String name)
                     {
@@ -57,6 +56,6 @@ public class PedDetector
                     }
         });
 
-        RejectionCascade rc = new RejectionCascade(ds, 0.1);
+        RejectionCascade rc = new RejectionCascade(ds, 0.01);
     }
 }
