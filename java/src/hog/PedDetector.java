@@ -56,6 +56,6 @@ public class PedDetector
                     }
         });
 
-        RejectionCascade rc = new RejectionCascade(ds, 0.01);
+        RejectionCascade rc = new RejectionCascade(ds, 0.0001);
     }
 }

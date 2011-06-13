@@ -20,7 +20,7 @@ public class RejectionCascade
 
         BoostedClassifier.PredictionStats ps = null;
         while (fpr > targetFPR) {
-            System.out.println("----------------------------------------");
+            System.out.println("\n----------------------------------------");
             System.out.println("  LEVEL " + (cascade.size()+1));
             System.out.println("----------------------------------------\n");
 
@@ -42,7 +42,7 @@ public class RejectionCascade
 
                 /* Do we have the required ROC ? */
                 if (ps.fpRate < MAX_LEVEL_FPR && ps.tpRate >= MIN_LEVEL_TPR) {
-                    System.out.println("Boosted classifier meets required FPR\n");
+                    System.out.println("Boosted classifier meets required FPR");
                     cascade.add(bc);
                     break;
                 } else {
@@ -118,8 +118,8 @@ public class RejectionCascade
         }
         System.out.println();
 
-        System.out.println("False Positive Rate = " + finalFPR);
-        System.out.println("Detection Rate = " + finalTPR);
+        System.out.println("Effective FPR = " + finalFPR);
+        System.out.println("Effective TPR = " + finalTPR);
     }
 
     public void save(PrintStream out)
