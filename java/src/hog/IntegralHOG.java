@@ -8,7 +8,7 @@ import magic.camera.util.*;
 
 /**
  * Efficiently compute the unsigned HOG for any rectangular region within an image
- * */
+ */
 public class IntegralHOG
 {
     final FloatImage xgim;
