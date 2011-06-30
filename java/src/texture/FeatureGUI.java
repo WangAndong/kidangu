@@ -12,6 +12,7 @@ import javax.imageio.*;
 import javax.swing.*;
 
 import april.image.*;
+import april.util.*;
 
 
 public class FeatureGUI
@@ -49,7 +50,7 @@ public class FeatureGUI
 
             setSelection(start.getPoint(), e.getPoint());
 
-            BufferedImage im = model.im;
+            BufferedImage im = model.getImage();
             FloatImage iim = new FloatImage(im.getWidth(), im.getHeight(), FloatImage.imageToFloats(im));
 
             CoLevels co = new CoLevels(iim);
@@ -88,20 +89,53 @@ public class FeatureGUI
         }
     }
 
-    public static void main(String[] args) throws IOException
+    public static void main(final String[] args) throws IOException
     {
         JFrame jf = new JFrame();
         jf.setLayout(new BorderLayout());
 
-        DataModel model = new DataModel();
+        final DataModel model = new DataModel();
         BufferedImage im = ImageIO.read(new File(args[0]));
-        model.im = Util.copySubImage(im, 0, 1*im.getHeight()/2, im.getWidth(), im.getHeight()/2);
+        model.setImage(Util.copySubImage(im, 0, 2*im.getHeight()/3, im.getWidth(), im.getHeight()/3));
 
         ImageView imp = new ImageView(model);
         jf.add(imp, BorderLayout.CENTER);
 
         OutputView ov = new OutputView(model);
         jf.add(ov, BorderLayout.SOUTH);
+
+        ParameterGUI pg = new ParameterGUI();
+        pg.addButtons(">>", ">>", "classify", "Classify");
+        pg.addListener(new ParameterListener() {
+            ImageStore store = new ImageStore(args, model);
+
+            public void parameterChanged(ParameterGUI pg, String name) {
+                if (name.equals(">>")) {
+                    final BufferedImage rim = store.getRandomImage();
+                    model.setImage(Util.copySubImage(rim, 0, 2*rim.getHeight()/3, rim.getWidth(), rim.getHeight()/3));
+                } else {
+                    BufferedImage im = model.getImage();
+                    FloatImage iim = new FloatImage(im.getWidth(), im.getHeight(), FloatImage.imageToFloats(im));
+                    CoLevels co = new CoLevels(iim);
+
+                    Graphics g = im.getGraphics();
+                    for (int y=0; y<im.getHeight()-16; y+=16)
+                        for (int x=0; x<im.getWidth()-16; x+=16) {
+                            double[] m = co.getFeatures(x, y, x+15, y+15);
+                            if (m[2] > 2)
+                                g.setColor(Color.red);
+                            else
+                                g.setColor(Color.green);
+
+                            g.drawRect(x+2, y+2, 14, 14);
+                        }
+
+                    g.dispose();
+                    model.setImage(im);
+                }
+            }
+        });
+        jf.add(pg, BorderLayout.NORTH);
 
         final SelectionController sc = new SelectionController(model);
         imp.addMouseListener(sc);
@@ -116,7 +150,7 @@ public class FeatureGUI
 class DataModel
 {
     StringBuilder output = new StringBuilder();
-    BufferedImage im;
+    private BufferedImage im;
     Rectangle selection;
 
     ArrayList<Listener> listeners = new ArrayList<Listener>();
@@ -142,6 +176,11 @@ class DataModel
             l.imageChanged();
     }
 
+    public BufferedImage getImage()
+    {
+        return im;
+    }
+
     public static interface Listener
     {
         public void outputChanged();
@@ -163,8 +202,8 @@ class ImageView extends JPanel implements DataModel.Listener
     @Override
     public void paint(Graphics g)
     {
-        if (model.im != null) {
-            g.drawImage(model.im, 0, 0, null);
+        if (model.getImage() != null) {
+            g.drawImage(model.getImage(), 0, 0, null);
         }
         if (model.selection != null) {
             Rectangle sel = model.selection;
@@ -225,5 +264,33 @@ class OutputView extends TextArea implements DataModel.Listener
     @Override
     public void selectionChanged()
     {
+    }
+}
+
+class ImageStore
+{
+    String[] files;
+    Random rand = new Random();
+    DataModel model;
+
+    public ImageStore(String[] files, DataModel model)
+    {
+        this.files = files;
+        this.model = new DataModel();
+    }
+
+    public BufferedImage getRandomImage()
+    {
+        BufferedImage im = null;
+
+        try {
+            im = ImageIO.read(new File(files[rand.nextInt(files.length)]));
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+            System.exit(-1);
+        }
+
+        return im;
     }
 }
