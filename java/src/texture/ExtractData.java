@@ -1,7 +1,5 @@
 package texture;
 
-import hog.*;
-
 import java.awt.image.*;
 import java.io.*;
 
