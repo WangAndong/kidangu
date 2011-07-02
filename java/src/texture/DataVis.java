@@ -181,18 +181,11 @@ public class DataVis
 
         ArrayList<double[]> roadList = new ArrayList<double[]>();
         for (double[] d : road)
-            roadList.add(LinAlg.copy(d, 2));
+            roadList.add(LinAlg.copy(d, 3));
 
         ArrayList<double[]> otherList = new ArrayList<double[]>();
         for (double[] d : other)
-            otherList.add(LinAlg.copy(d, 2));
-
-
-        VisData v0 = new VisData(otherList, new VisDataPointStyle(Color.green, 5));
-        VisData v1 = new VisData(roadList, new VisDataPointStyle(Color.red, 5));
-
-        LogisticRegressionClassifier lrc = LogisticRegressionClassifier.train(otherList, roadList, 1e-2);
-        LinAlg.printTranspose(lrc.getFeatureWeights());
+            otherList.add(LinAlg.copy(d, 3));
 
         VisPlot plot = new VisPlot();
         plot.setYAxis(ChartAxis.makeYAxis(0, 4, 2));
@@ -207,20 +200,5 @@ public class DataVis
         jf.setSize(800, 800);
         jf.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         jf.setVisible(true);
-    }
-
-    static VisObject getPlane(double[] w)
-    {
-        VisData vd = new VisData(new VisDataPointStyle(Color.cyan, 1));
-
-        for (double x = -10; x<10; x+=0.1) {
-            for (double y = -10; y<10; y+=0.1) {
-                double[] v = new double[] {x,y,1};
-                double z = 1.0 / (1.0 + Math.exp(-LinAlg.dotProduct(v, w)));
-                vd.add(new double[] {x, y, z});
-            }
-        }
-
-        return vd;
     }
 }
