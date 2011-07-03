@@ -11,18 +11,111 @@ import java.util.*;
 import javax.imageio.*;
 import javax.swing.*;
 
+import libsvm.*;
+
 import april.image.*;
+import april.jmat.*;
 import april.util.*;
+
+import magic.camera.util.color.*;
 
 
 public class FeatureGUI
 {
-    private static final class SelectionController extends MouseAdapter
+    public static void main(final String[] args) throws IOException
+    {
+        JFrame jf = new JFrame();
+        jf.setLayout(new BorderLayout());
+
+        final DataModel model = new DataModel();
+        BufferedImage im = ImageIO.read(new File(args[0]));
+        model.setImage(Util.copySubImage(im, 0, 2*im.getHeight()/3, im.getWidth(), im.getHeight()/3));
+
+        ImageView imp = new ImageView(model);
+        jf.add(imp, BorderLayout.CENTER);
+
+        OutputView ov = new OutputView(model);
+        jf.add(ov, BorderLayout.SOUTH);
+
+        ParameterGUI pg = new ParameterGUI();
+        pg.addButtons("Random", "Random");
+        pg.addButtons("classify", "Classify", "CrCb", "CrCb");
+        pg.addButtons("Play", "Play", "Step >", "Step >", "< Step", "< Step", "Reset", "Reset");
+        pg.addListener(new ParamListener(model, args));
+        jf.add(pg, BorderLayout.NORTH);
+
+        final SelectionListener sc = new SelectionListener(model);
+        imp.addMouseListener(sc);
+        imp.addMouseMotionListener(sc);
+
+        jf.setSize(350, 500);
+        jf.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        jf.setVisible(true);
+    }
+
+    private static final class ParamListener implements ParameterListener
+    {
+        private final DataModel model;
+        ImageStore store;
+
+        private ParamListener(DataModel model, String[] args)
+        {
+            this.model = model;
+            store = new ImageStore(args, model);
+        }
+
+        public void parameterChanged(ParameterGUI pg, String name) {
+            if (name.equals("Random")) {
+                final BufferedImage rim = store.getRandom();
+                model.setImage(Util.copySubImage(rim, 0, 2*rim.getHeight()/3, rim.getWidth(), rim.getHeight()/3));
+
+            } else if (name.equals("classify")) {
+                BufferedImage im = model.getImage();
+                model.setImage(labelImage(im));
+
+            } else if (name.equals("CrCb")) {
+                BufferedImage src = model.getImage();
+
+                final int W = src.getWidth();
+                final int H = src.getHeight();
+                BufferedImage dest = new BufferedImage(W, H, src.getType());
+
+                final int in[] = ((DataBufferInt) (src.getRaster().getDataBuffer())).getData();
+                final int out[] = ((DataBufferInt) (dest.getRaster().getDataBuffer())).getData();
+
+                for (int y = 0; y < H; ++y) {
+                    for (int x = 0; x < W; ++x) {
+                        float[] YCbCr = ColorSpace.RGBtoYCbCr(in[y*W + x]);
+                        out[y*W + x] = ColorSpace.YCbCrtoRGB(0.5f, YCbCr[1], YCbCr[2]);
+                    }
+                }
+
+                model.setImage(dest);
+
+            } else if (name.equals("Play")) {
+                new MovieThread(store, model).start();
+
+            } else if (name.equals("Step >")) {
+                BufferedImage im = store.getNext();
+                if (im != null)
+                    model.setImage(labelImage(im, 2*im.getHeight()/3));
+
+            } else if (name.equals("< Step")) {
+                BufferedImage im = store.getPrevious();
+                model.setImage(im);
+
+            } else if (name.equals("Reset")) {
+                store.reset();
+            }
+        }
+    }
+
+    private static final class SelectionListener extends MouseAdapter
     {
         final DataModel model;
         MouseEvent start;
 
-        public SelectionController(DataModel model)
+        public SelectionListener(DataModel model)
         {
             this.model = model;
         }
@@ -57,10 +150,18 @@ public class FeatureGUI
             Rectangle sel = model.selection;
 
             StringBuilder sb = new StringBuilder();
+            sb.append("{ ");
+
             double[] v = co.getFeatures(sel.x, sel.y, sel.x+sel.width, sel.y+sel.height);
             for (double d : v)
                 sb.append(String.format("%.4f, ", d));
-            model.appendOutput(sb.toString() + "\n");
+
+            YCrCbImage cim = new YCrCbImage(im);
+            v = cim.getAverageColor(sel.x, sel.y, sel.x+sel.width, sel.y+sel.height);
+            for (double d : v)
+                sb.append(String.format("%.4f, ", d));
+
+            model.appendOutput(sb.toString() + "},\n");
 
             start = null;
         }
@@ -89,61 +190,74 @@ public class FeatureGUI
         }
     }
 
-    public static void main(final String[] args) throws IOException
+    static class MovieThread extends Thread
     {
-        JFrame jf = new JFrame();
-        jf.setLayout(new BorderLayout());
+        final DataModel model;
+        final ImageStore store;
 
-        final DataModel model = new DataModel();
-        BufferedImage im = ImageIO.read(new File(args[0]));
-        model.setImage(Util.copySubImage(im, 0, 2*im.getHeight()/3, im.getWidth(), im.getHeight()/3));
+        public MovieThread(ImageStore ims, DataModel m)
+        {
+            this.model = m;
+            this.store = ims;
+        }
 
-        ImageView imp = new ImageView(model);
-        jf.add(imp, BorderLayout.CENTER);
+        @Override
+        public void run()
+        {
+            while (true) {
+                BufferedImage im = store.getNext();
+                if (im == null)
+                    return;
 
-        OutputView ov = new OutputView(model);
-        jf.add(ov, BorderLayout.SOUTH);
-
-        ParameterGUI pg = new ParameterGUI();
-        pg.addButtons(">>", ">>", "classify", "Classify");
-        pg.addListener(new ParameterListener() {
-            ImageStore store = new ImageStore(args, model);
-
-            public void parameterChanged(ParameterGUI pg, String name) {
-                if (name.equals(">>")) {
-                    final BufferedImage rim = store.getRandomImage();
-                    model.setImage(Util.copySubImage(rim, 0, 2*rim.getHeight()/3, rim.getWidth(), rim.getHeight()/3));
-                } else {
-                    BufferedImage im = model.getImage();
-                    FloatImage iim = new FloatImage(im.getWidth(), im.getHeight(), FloatImage.imageToFloats(im));
-                    CoLevels co = new CoLevels(iim);
-
-                    Graphics g = im.getGraphics();
-                    for (int y=0; y<im.getHeight()-16; y+=16)
-                        for (int x=0; x<im.getWidth()-16; x+=16) {
-                            double[] m = co.getFeatures(x, y, x+15, y+15);
-                            if (m[2] > 2)
-                                g.setColor(Color.red);
-                            else
-                                g.setColor(Color.green);
-
-                            g.drawRect(x+2, y+2, 14, 14);
-                        }
-
-                    g.dispose();
-                    model.setImage(im);
+                model.setImage(labelImage(im, 2*im.getHeight()/3));
+                try {
+                    Thread.sleep(500);
+                }
+                catch (InterruptedException e) {
+                    e.printStackTrace();
                 }
             }
-        });
-        jf.add(pg, BorderLayout.NORTH);
+        }
+    }
 
-        final SelectionController sc = new SelectionController(model);
-        imp.addMouseListener(sc);
-        imp.addMouseMotionListener(sc);
+    static BufferedImage labelImage(BufferedImage im)
+    {
+        return labelImage(im, 0);
+    }
 
-        jf.setSize(350, 500);
-        jf.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        jf.setVisible(true);
+    static BufferedImage labelImage(BufferedImage im, int startY)
+    {
+        FloatImage iim = new FloatImage(im.getWidth(), im.getHeight(), FloatImage.imageToFloats(im));
+        CoLevels co = new CoLevels(iim);
+        YCrCbImage cim = new YCrCbImage(im);
+
+        DataNormalizer dn = new DataNormalizer(
+                new double[] { 0.0024, 0.8204, 0.0801, 0.1996, 0.0475, -0.1752, },
+                new double[] { 0.1640, 3.0033, 11.6133, 0.8483, 0.3341, -0.0475, }
+                );
+
+        Graphics g = im.getGraphics();
+        for (int y=startY; y<im.getHeight()-16; y+=16)
+            for (int x=0; x<im.getWidth()-16; x+=16) {
+                double[] texture = co.getFeatures(x, y, x+15, y+15);
+                double[] color = cim.getAverageColor(x, y, x+15, y+15);
+
+                double[] f = LinAlg.resize(texture, texture.length + color.length);
+                f = dn.normalize(f);
+
+                for (int i=0; i<color.length; ++i)
+                    f[texture.length + 1] = color[i];
+
+                if (Classifier.predict(f) < 0)
+                    g.setColor(Color.orange);
+                else
+                    g.setColor(Color.cyan);
+
+                g.drawRect(x+2, y+2, 14, 14);
+            }
+
+        g.dispose();
+        return im;
     }
 }
 
@@ -271,6 +385,8 @@ class ImageStore
 {
     String[] files;
     Random rand = new Random();
+    int currentIndex = 0;
+
     DataModel model;
 
     public ImageStore(String[] files, DataModel model)
@@ -279,18 +395,75 @@ class ImageStore
         this.model = new DataModel();
     }
 
-    public BufferedImage getRandomImage()
+    public void reset()
     {
-        BufferedImage im = null;
+        currentIndex = 0;
+    }
 
+    public BufferedImage getPrevious()
+    {
+        if (currentIndex > 0) {
+            --currentIndex;
+        }
+
+        return getCurrent();
+    }
+
+    public BufferedImage getNext()
+    {
+        if (currentIndex < files.length-1) {
+            ++currentIndex;
+            return getCurrent();
+        }
+
+        return null;
+    }
+
+    public BufferedImage getCurrent()
+    {
         try {
-            im = ImageIO.read(new File(files[rand.nextInt(files.length)]));
+            BufferedImage im = ImageIO.read(new File(files[currentIndex]));
+            im = ImageUtil.conformImageToInt(im);
+            return im;
         }
         catch (IOException e) {
             e.printStackTrace();
             System.exit(-1);
         }
 
-        return im;
+        return null;
+    }
+
+    public BufferedImage getRandom()
+    {
+        currentIndex = rand.nextInt(files.length);
+        return getCurrent();
+    }
+}
+
+class Classifier
+{
+    static svm_model model;
+
+    static {
+        try {
+            model = svm.svm_load_model("/home/rpradeep/studio/libsvm-3.0/tools/texture.model");
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+            System.exit(-1);
+        }
+    }
+
+    static public double predict(double[] x)
+    {
+        svm_node[] nodes = new svm_node[x.length];
+        for (int i=0; i<x.length; i++) {
+            nodes[i] = new svm_node();
+            nodes[i].index = i+1;
+            nodes[i].value = x[i];
+        }
+
+        return svm.svm_predict(model, nodes);
     }
 }
