@@ -98,7 +98,7 @@ public class FeatureGUI
             } else if (name.equals("Step >")) {
                 BufferedImage im = store.getNext();
                 if (im != null)
-                    model.setImage(labelImage(im, 2*im.getHeight()/3));
+                    model.setImage(labelImage(im, 2*im.getHeight()/4));
 
             } else if (name.equals("< Step")) {
                 BufferedImage im = store.getPrevious();
@@ -209,7 +209,7 @@ public class FeatureGUI
                 if (im == null)
                     return;
 
-                model.setImage(labelImage(im, 2*im.getHeight()/3));
+                model.setImage(labelImage(im, 2*im.getHeight()/4));
                 try {
                     Thread.sleep(500);
                 }
