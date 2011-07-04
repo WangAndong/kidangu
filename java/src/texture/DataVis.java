@@ -4,12 +4,15 @@ import java.awt.*;
 import java.util.*;
 import java.util.List;
 
+import javax.media.opengl.*;
+import javax.media.opengl.glu.*;
 import javax.swing.*;
 
 import cluster.*;
 
 import april.jmat.*;
 import april.vis.*;
+import april.vis.VisSphere.*;
 
 import magic.vis.chart.*;
 
@@ -606,9 +609,8 @@ public class DataVis
         means = new KMeansClusterer(all, means).estimateCenters();
         ArrayList<MultiGaussian> mix = new GaussianMixture(all, means).estimate();
         final VisWorld.Buffer vbgmm = vc.getWorld().getBuffer("mixture");
-        for (int g=0; g<mix.size(); ++g) {
-            MultiGaussian mg = mix.get(g);
-            vbgmm.addBuffered(makeGaussianSpheroids(mg, Color.white));
+        for (MultiGaussian mg : mix) {
+            vbgmm.addBuffered(new VisMultiGaussian(mg));
         }
 
         vbgmm.switchBuffer();
@@ -645,26 +647,101 @@ public class DataVis
         }
         System.out.println("},");
     }
+}
 
-    static VisObject makeGaussianSpheroids(MultiGaussian mg, Color c)
+class VisMultiGaussian extends VisChain
+{
+    static final VisWireFrameSphere vsph = new VisWireFrameSphere(1, new Color(64, 64, 64));
+
+    public VisMultiGaussian(MultiGaussian mg)
     {
-        assert (mg.getDimension() == 3);
+        double[] u = mg.getMean();
+        super.add(LinAlg.translate(u));
 
-        double[] mu = mg.getMean();
-        final SingularValueDecomposition svd = new SingularValueDecomposition(mg.getCovariance());
-        Matrix A = svd.getU().times(svd.getS());
-        A.resize(4, 4);
-        A.set(3, 3, 1);
+        /* Derive a transformation from the Covariance matrix */
+        SingularValueDecomposition svd = new SingularValueDecomposition(mg.getCovariance());
+        Matrix T = svd.getU().times(svd.getS());
 
-        VisChain vc1 = new VisChain(LinAlg.translate(mu), A.copyArray(), LinAlg.scale(2),
-                new VisSphere(1, ColorUtil.setAlpha(c, 92)));
-        VisChain vc2 = new VisChain(LinAlg.translate(mu), A.copyArray(), LinAlg.scale(4),
-                new VisSphere(1, ColorUtil.setAlpha(c, 92)));
-        VisChain vc3 = new VisChain(LinAlg.translate(mu), A.copyArray(), LinAlg.scale(6),
-                new VisSphere(1, ColorUtil.setAlpha(c, 92)));
+        /* T needs to be 4x4 */
+        T.resize(4, 4);
+        T.set(3, 3, 1);
 
-        VisChain vc = new VisChain(vc1, vc2, vc3);
+        super.add(T.copyArray(), LinAlg.scale(6) /*6 sigma*/, vsph);
+    }
+}
 
-        return vc;
+
+class VisWireFrameSphere implements VisObject
+{
+    Color c;
+
+    static ArrayList<Slice> slices;
+
+    double r;
+
+    static final class Slice
+    {
+        ArrayList<double[]> points;
+        ArrayList<double[]> normals;
+    }
+
+    public VisWireFrameSphere(double r, Color c)
+    {
+        this.r = r;
+        this.c = c;
+
+        int resolution = 30;
+
+        if (slices == null) {
+            // create slices for a unit sphere.
+            int nslices = resolution;
+            slices = new ArrayList<Slice>();
+
+            for (int s = 0; s < nslices; s++) {
+
+                double t = Math.PI*s/(nslices-1);
+                double z = Math.cos(t);
+                int npoints = resolution;
+
+                double thisr = Math.sqrt(1 - z*z);
+
+                Slice slice = new Slice();
+                slice.points = new ArrayList<double[]>();
+                slice.normals = new ArrayList<double[]>();
+                slices.add(slice);
+
+                for (int i = 0; i < npoints; i++) {
+                    double theta = 2*Math.PI*i/npoints;
+                    double x = thisr * Math.cos(theta);
+                    double y = thisr * Math.sin(theta);
+
+                    double xyz[] = new double[] {x, y, z};
+                    slice.points.add(xyz);
+                    slice.normals.add(LinAlg.normalize(xyz));
+                }
+            }
+        }
+    }
+
+    public void render(VisContext vc, GL gl, GLU glu)
+    {
+        VisUtil.pushGLState(gl);
+
+        VisUtil.setColor(gl, c);
+        gl.glScaled(r, r, r);
+
+        gl.glBegin(GL.GL_QUAD_STRIP);
+
+        for (int s = 0; s+1 < slices.size(); s++) {
+            Slice s0 = slices.get(s);
+            Slice s1 = slices.get(s+1);
+
+            for (int i = 0; i < s0.points.size(); i++) {
+                gl.glVertex3dv(s1.points.get(i), 0);
+            }
+        }
+
+        gl.glEnd();
+        VisUtil.popGLState(gl);
     }
 }
