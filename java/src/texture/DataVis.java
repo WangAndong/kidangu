@@ -6,6 +6,8 @@ import java.util.List;
 
 import javax.swing.*;
 
+import cluster.*;
+
 import april.jmat.*;
 import april.vis.*;
 
@@ -593,15 +595,35 @@ public class DataVis
             neg.add(v);
         }
 
+        ArrayList<double[]> all = new ArrayList<double[]>();
+        all.addAll(pos);
+        all.addAll(neg);
+
+        ArrayList<double[]> means = new ArrayList<double[]>();
+        means.add(all.get(0));
+        means.add(all.get(100));
+
+        means = new KMeansClusterer(all, means).estimateCenters();
+        ArrayList<MultiGaussian> mix = new GaussianMixture(all, means).estimate();
+        final VisWorld.Buffer vbgmm = vc.getWorld().getBuffer("mixture");
+        for (int g=0; g<mix.size(); ++g) {
+            MultiGaussian mg = mix.get(g);
+            vbgmm.addBuffered(makeGaussianSpheroids(mg, Color.white));
+        }
+
+        vbgmm.switchBuffer();
+
+
         VisPlot plot = new VisPlot();
-        plot.addData(new XYDataSeries(pos, new VisDataPointStyle(Color.green, 3)));
-        plot.addData(new XYDataSeries(neg, new VisDataPointStyle(Color.red, 3)));
+        plot.addData(new XYDataSeries(pos, new VisDataPointStyle(Color.orange, 5)));
+        plot.addData(new XYDataSeries(neg, new VisDataPointStyle(Color.cyan, 5)));
 
         final VisWorld.Buffer vb = vc.getWorld().getBuffer("content");
+
         vb.addBuffered(plot);
         vb.switchBuffer();
 
-        jf.setSize(800, 800);
+        jf.setSize(800, 600);
         jf.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         jf.setVisible(true);
     }
@@ -622,5 +644,27 @@ public class DataVis
             System.out.printf("%.4f, ", d[i]);
         }
         System.out.println("},");
+    }
+
+    static VisObject makeGaussianSpheroids(MultiGaussian mg, Color c)
+    {
+        assert (mg.getDimension() == 3);
+
+        double[] mu = mg.getMean();
+        final SingularValueDecomposition svd = new SingularValueDecomposition(mg.getCovariance());
+        Matrix A = svd.getU().times(svd.getS());
+        A.resize(4, 4);
+        A.set(3, 3, 1);
+
+        VisChain vc1 = new VisChain(LinAlg.translate(mu), A.copyArray(), LinAlg.scale(2),
+                new VisSphere(1, ColorUtil.setAlpha(c, 92)));
+        VisChain vc2 = new VisChain(LinAlg.translate(mu), A.copyArray(), LinAlg.scale(4),
+                new VisSphere(1, ColorUtil.setAlpha(c, 92)));
+        VisChain vc3 = new VisChain(LinAlg.translate(mu), A.copyArray(), LinAlg.scale(6),
+                new VisSphere(1, ColorUtil.setAlpha(c, 92)));
+
+        VisChain vc = new VisChain(vc1, vc2, vc3);
+
+        return vc;
     }
 }

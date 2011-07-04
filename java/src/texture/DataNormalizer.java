@@ -70,16 +70,4 @@ public class DataNormalizer
 
         return r;
     }
-
-    public static void main(String[] args)
-    {
-        DataNormalizer dn = new DataNormalizer();
-        double[][] data = new double[][] {
-                {-2, 3},
-                {2, 4},
-        };
-
-        dn.observeLimits(Arrays.asList(data));
-        ArrayList<double[]> n = dn.normalize(Arrays.asList(data));
-    }
 }
