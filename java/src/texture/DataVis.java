@@ -651,7 +651,7 @@ public class DataVis
 
 class VisMultiGaussian extends VisChain
 {
-    static final VisWireFrameSphere vsph = new VisWireFrameSphere(1, new Color(64, 64, 64));
+    static final VisWireFrameSphere vsph = new VisWireFrameSphere(1, new Color(192, 128, 128));
 
     public VisMultiGaussian(MultiGaussian mg)
     {
@@ -673,77 +673,38 @@ class VisMultiGaussian extends VisChain
 
 
 /** Copied from VisSphere */
-class VisWireFrameSphere implements VisObject
+class VisWireFrameSphere extends VisChain
 {
     Color c;
-
-    static ArrayList<Slice> slices;
-
     double r;
-
-    static final class Slice
-    {
-        ArrayList<double[]> points;
-        ArrayList<double[]> normals;
-    }
 
     public VisWireFrameSphere(double r, Color c)
     {
         this.r = r;
         this.c = c;
 
-        int resolution = 30;
+        int nslices = 20;
+        for (int s = 0; s < nslices; s++) {
+            double t = Math.PI*s/(nslices-1);
+            double z = Math.cos(t);
+            int npoints = 60;
 
-        if (slices == null) {
-            // create slices for a unit sphere.
-            int nslices = resolution;
-            slices = new ArrayList<Slice>();
+            double thisr = Math.sqrt(1 - z*z);
 
-            for (int s = 0; s < nslices; s++) {
+            VisData vdHSlice = new VisData(new VisDataLineStyle(c, 1, true));
+            VisData vdVSlice = new VisData(new VisDataLineStyle(c, 1, true));
 
-                double t = Math.PI*s/(nslices-1);
-                double z = Math.cos(t);
-                int npoints = resolution;
+            for (int i = 0; i < npoints; i++) {
+                double theta = 2*Math.PI*i/npoints;
+                double x = thisr * Math.cos(theta);
+                double y = thisr * Math.sin(theta);
 
-                double thisr = Math.sqrt(1 - z*z);
-
-                Slice slice = new Slice();
-                slice.points = new ArrayList<double[]>();
-                slice.normals = new ArrayList<double[]>();
-                slices.add(slice);
-
-                for (int i = 0; i < npoints; i++) {
-                    double theta = 2*Math.PI*i/npoints;
-                    double x = thisr * Math.cos(theta);
-                    double y = thisr * Math.sin(theta);
-
-                    double xyz[] = new double[] {x, y, z};
-                    slice.points.add(xyz);
-                    slice.normals.add(LinAlg.normalize(xyz));
-                }
+                vdHSlice.add(new double[] {x, z, y});
+                vdVSlice.add(new double[] {x, y, z});
             }
+
+            super.add(vdHSlice);
+            super.add(vdVSlice);
         }
-    }
-
-    public void render(VisContext vc, GL gl, GLU glu)
-    {
-        VisUtil.pushGLState(gl);
-
-        VisUtil.setColor(gl, c);
-        gl.glScaled(r, r, r);
-
-        gl.glBegin(GL.GL_QUAD_STRIP);
-
-        for (int s = 0; s+1 < slices.size(); s++) {
-            Slice s0 = slices.get(s);
-            Slice s1 = slices.get(s+1);
-
-            for (int i = 0; i < s0.points.size(); i++) {
-                gl.glVertex3dv(s1.points.get(i), 0);
-            }
-        }
-
-        gl.glEnd();
-        VisUtil.popGLState(gl);
     }
 }
